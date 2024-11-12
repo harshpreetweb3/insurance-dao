@@ -4,6 +4,8 @@ use scrypto::prelude::*;
 mod pandao_praposal {
     use std::path::Component;
 
+    use crate::VotingType;
+
     pub struct TokenWeightProposal {
         /// A simple string representing the current proposal.
         pub title: String,
@@ -34,13 +36,13 @@ mod pandao_praposal {
     
         // A mapping of addresses to their respective vote weights.
         // pub votes: HashMap<Address, Decimal>,
-
         pub address_issued_bonds_to_sell : Option<ComponentAddress>,
         pub target_xrd_amount: Option<Decimal>,
-
         pub vote_caster_addresses : HashSet<ComponentAddress>,
-
-        
+        pub proposal_creator_address : Option<ComponentAddress>,
+        pub amount_of_tokens_should_be_minted : Option<usize>,
+        pub voting_type: VotingType,
+        // pub number_of_people_voted: i32
     }
 
     impl TokenWeightProposal  {
@@ -54,8 +56,12 @@ mod pandao_praposal {
             owner_badge_address: ResourceAddress,
             voter_badge_address: ResourceAddress,
             address_issued_bonds_to_sell : Option<ComponentAddress>,
-            target_xrd_amount : Option<Decimal>
+            target_xrd_amount : Option<Decimal>,
+            proposal_creator_address : Option<ComponentAddress>,
+            amount_of_tokens_should_be_minted : Option<usize>,
+            voting_type: VotingType, // New parameter
         ) -> (Global<TokenWeightProposal >, GlobalAddressReservation) {
+            
             let (address_reservation, _) =
                 Runtime::allocate_component_address(TokenWeightProposal ::blueprint_id());
 
@@ -71,7 +77,10 @@ mod pandao_praposal {
                 voter_badge_address,
                 address_issued_bonds_to_sell,
                 target_xrd_amount,
-                vote_caster_addresses : HashSet::new()
+                vote_caster_addresses : HashSet::new(),
+                proposal_creator_address,
+                amount_of_tokens_should_be_minted,
+                voting_type
             }
             .instantiate()
             .prepare_to_globalize(OwnerRole::None)
@@ -83,27 +92,43 @@ mod pandao_praposal {
 
         pub fn vote(&mut self, token: Bucket, against: bool) -> Bucket {
 
+            let mut amount : Decimal = Default::default();
+
+            match self.voting_type {
+                VotingType::ResourceHold => {
+                    amount = token.amount();
+                }
+                VotingType::Equality => {
+                    amount = Decimal::one();
+                }
+            }
+
             assert_eq!(
                 token.resource_address(),
                 self.voter_badge_address,
                 "wrong voting token supplied"
             );
+    
 
-            let amount = token.amount();
+            // let amount = token.amount();
 
             if against {
                 
                 self.voted_against += amount;
+                // self.number_of_people_voted +=1 ; 
 
                 token
 
             } else {
 
                 self.voted_for += amount;
+                // self.number_of_people_voted +=1 ; 
 
                 token
 
             }
+
+            
         }
 
         pub fn get_address_issued_bonds(&self) -> ComponentAddress {
@@ -130,6 +155,22 @@ mod pandao_praposal {
 
         pub fn set_vote_caster_address(&mut self, address : ComponentAddress){
             self.vote_caster_addresses.insert(address);
+        }
+
+        pub fn get_last_time(&self) -> scrypto::time::UtcDateTime {
+            self.end_time.clone()
+        }
+
+        pub fn get_token_mint_amount(&self) -> Option<usize> {
+            self.amount_of_tokens_should_be_minted
+        }
+
+        pub fn get_number_of_voters(&self) -> usize {
+            self.vote_caster_addresses.len()
+        }
+
+        pub fn get_minimum_quorum(&self) -> Decimal{
+            self.minimum_quorum
         }
 
     }

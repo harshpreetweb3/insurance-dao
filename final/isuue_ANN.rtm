@@ -1,0 +1,16 @@
+CALL_METHOD
+Address("component_tdx_2_1cqkr75nw24nawx8q96rqfv4gz4r5ytyz6f24s55xt3jmprxestx0rw")
+"issue_ann_token"
+"ANN"
+"ANN"
+"#1"
+Decimal("0")
+"xrd"
+1731504785u64
+1889271185u64
+Decimal("50")
+"long"
+Decimal("50")
+Decimal("13")
+Address("account_tdx_2_128e6fmjkhjqx0n8h9562rrvstl883wq22pzea4ucnnx0762ptlch4s")
+;
