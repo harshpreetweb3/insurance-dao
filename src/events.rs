@@ -28,7 +28,8 @@ pub enum EventType {
 
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub enum DaoType {
-    TokenWeight,
+    Investment,
+    Insurance
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]

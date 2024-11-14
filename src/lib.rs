@@ -310,7 +310,7 @@ mod radixdao {
             // Runtime::emit_event(PandaoEvent {
             //     event_type: EventType::DEPLOYMENT,
 
-            //     dao_type: DaoType::TokenWeight,
+            //     dao_type: DaoType::Insurance,
 
             //     component_address,
 
@@ -351,7 +351,7 @@ mod radixdao {
                     Runtime::emit_event(PandaoEvent {
                         // event_type: EventType::PROPOSAL_CREATION_RIGHT,
                         event_type: EventType::DEPLOYMENT,
-                        dao_type: DaoType::TokenWeight,
+                        dao_type: DaoType::Insurance,
                         component_address,
                         meta_data: DaoEvent::TokenWeightedDEployment(event_metadata),
                     });
@@ -390,7 +390,7 @@ mod radixdao {
                     Runtime::emit_event(PandaoEvent {
                         // event_type: EventType::PROPOSAL_CREATION_RIGHT,
                         event_type: EventType::DEPLOYMENT,
-                        dao_type: DaoType::TokenWeight,
+                        dao_type: DaoType::Insurance,
                         component_address,
                         meta_data: DaoEvent::TokenWeightedDEployment(event_metadata),
                     });
@@ -427,7 +427,7 @@ mod radixdao {
                     Runtime::emit_event(PandaoEvent {
                         // event_type: EventType::PROPOSAL_CREATION_RIGHT,
                         event_type: EventType::DEPLOYMENT,
-                        dao_type: DaoType::TokenWeight,
+                        dao_type: DaoType::Insurance,
                         component_address,
                         meta_data: DaoEvent::TokenWeightedDEployment(event_metadata),
                     });
@@ -476,7 +476,7 @@ mod radixdao {
             Runtime::emit_event(PandaoEvent {
                 event_type: EventType::TOKEN_BOUGHT,
 
-                dao_type: DaoType::TokenWeight,
+                dao_type: DaoType::Insurance,
 
                 component_address,
 
@@ -511,7 +511,7 @@ mod radixdao {
 
             Runtime::emit_event(PandaoEvent {
                 event_type: EventType::TOKEN_SELL,
-                dao_type: DaoType::TokenWeight,
+                dao_type: DaoType::Insurance,
                 component_address,
                 meta_data: DaoEvent::TokenWeightedTokenPurchase(event_metadata),
             });
@@ -691,7 +691,7 @@ mod radixdao {
 
             // Runtime::emit_event(PandaoEvent {
             //     event_type: EventType::PRAPOSAL,
-            //     dao_type: DaoType::TokenWeight,
+            //     dao_type: DaoType::Insurance,
             //     meta_data: DaoEvent::PraposalDeployment(praposal_metadata),
             //     component_address,
             // });
@@ -720,7 +720,7 @@ mod radixdao {
 
                     Runtime::emit_event(PandaoEvent {
                         event_type: EventType::PRAPOSAL,
-                        dao_type: DaoType::TokenWeight,
+                        dao_type: DaoType::Insurance,
                         meta_data: DaoEvent::PraposalDeployment(praposal_metadata),
                         component_address,
                     });
@@ -748,7 +748,7 @@ mod radixdao {
 
                     Runtime::emit_event(PandaoEvent {
                         event_type: EventType::PRAPOSAL,
-                        dao_type: DaoType::TokenWeight,
+                        dao_type: DaoType::Insurance,
                         meta_data: DaoEvent::PraposalDeployment(praposal_metadata),
                         component_address,
                     });
@@ -876,7 +876,7 @@ mod radixdao {
 
                     Runtime::emit_event(PandaoEvent {
                         event_type: EventType::QUORUM_NOT_MET,
-                        dao_type: DaoType::TokenWeight,
+                        dao_type: DaoType::Insurance,
                         component_address,
                         meta_data: DaoEvent::ProposalQuorumNotMet(event_metadata),
                     });
@@ -912,7 +912,7 @@ mod radixdao {
 
                 // Runtime::emit_event(PandaoEvent {
                 //     event_type: EventType::EXECUTE_PROPOSAL,
-                //     dao_type: DaoType::TokenWeight,
+                //     dao_type: DaoType::Insurance,
                 //     meta_data: DaoEvent::ProposalExecute(praposal_metadata),
                 //     component_address,
                 // });
@@ -927,7 +927,7 @@ mod radixdao {
 
                 Runtime::emit_event(PandaoEvent {
                     event_type: EventType::QUORUM_MET,
-                    dao_type: DaoType::TokenWeight,
+                    dao_type: DaoType::Insurance,
                     component_address,
                     meta_data: DaoEvent::ProposalQuorumMet(event_metadata),
                 });
@@ -990,7 +990,7 @@ mod radixdao {
 
                 Runtime::emit_event(PandaoEvent {
                     event_type: EventType::VOTE,
-                    dao_type: DaoType::TokenWeight,
+                    dao_type: DaoType::Insurance,
                     component_address: Runtime::global_address(),
                     meta_data: DaoEvent::PraposalVote(event_metadata),
                 });
@@ -1065,7 +1065,7 @@ mod radixdao {
 
             Runtime::emit_event(PandaoEvent {
                 event_type: EventType::ANN_TOKEN_CREATION,
-                dao_type: DaoType::TokenWeight,
+                dao_type: DaoType::Insurance,
                 component_address: Runtime::global_address(),
                 meta_data: DaoEvent::AnnTokenCreation(event_metadata),
             });
@@ -1137,7 +1137,7 @@ mod radixdao {
 
         //     Runtime::emit_event(PandaoEvent {
         //         event_type: EventType::ZERO_COUPON_BOND_CREATION, // You can define a specific event type for bond creation if needed
-        //         dao_type: DaoType::TokenWeight,
+        //         dao_type: DaoType::Insurance,
         //         component_address: Runtime::global_address(),
         //         meta_data: DaoEvent::ZeroCouponBondCreation(event_metadata),
         //     });
@@ -1304,7 +1304,7 @@ mod radixdao {
 
             Runtime::emit_event(PandaoEvent {
                 event_type: EventType::TREASURY_CONTRIBUTION,
-                dao_type: DaoType::TokenWeight,
+                dao_type: DaoType::Insurance,
                 component_address: Runtime::global_address(),
                 meta_data: DaoEvent::TreasuryContribution(event_metadata),
             });
@@ -1439,7 +1439,7 @@ mod radixdao {
 
         //     Runtime::emit_event(PandaoEvent {
         //         event_type: EventType::PRAPOSAL,
-        //         dao_type: DaoType::TokenWeight,
+        //         dao_type: DaoType::Insurance,
         //         meta_data: DaoEvent::PraposalDeployment(proposal_metadata),
         //         component_address,
         //     });
