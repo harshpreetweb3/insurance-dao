@@ -24,6 +24,10 @@ pub enum EventType {
     QUORUM_NOT_MET,
 
     QUORUM_MET,
+
+    ANNUAL_PAYOUT_CLAIMED,
+
+    ANNUAL_PAYOUT_COULD_NOT_BE_CLAIMED
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
@@ -117,6 +121,8 @@ pub enum DaoEvent {
                                           // ProposalCreationRightTokenHolderThreshold(Decimal),
 
                                           // ProposalCreationRightAdmin
+
+    ClaimAnnualPayout(ClaimAnnualPayout)
 }
 
 // #[derive(ScryptoSbor, ScryptoEvent)]
@@ -242,4 +248,9 @@ pub struct ProposalQuorumMet {
     pub proposal_id: usize,
     pub minimum_quorum: Decimal,
     pub number_of_voters: usize,
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct ClaimAnnualPayout {
+    pub message : String
 }

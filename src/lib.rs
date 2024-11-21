@@ -5,7 +5,6 @@ mod proposal;
 use scrypto::prelude::*;
 
 mod ann;
-mod zerocouponbond;
 
 #[blueprint]
 #[events(PandaoEvent, DaoEvent, TokenWightedDeployment, DaoType, EventType)]
@@ -19,11 +18,6 @@ mod radixdao {
     // use scrypto_test::prelude::drop_fungible_bucket;
 
     use ann::annuity::Annuity;
-    use zerocouponbond::zerocouponbond::ZeroCouponBond; //NEWLY ADDED
-
-    // Use the ZeroCouponBond from the zerocouponbond module
-
-    use crate::zerocouponbond::BondDetails;
 
     pub struct TokenWeigtedDao {
         // current_praposal: Option<Global<TokenWeightProposal>>,
@@ -1023,6 +1017,7 @@ mod radixdao {
             number_of_annuities_to_mint: Decimal,
             your_address: ComponentAddress, //      ISSUER ADDRESS
         ) -> Global<Annuity> {
+
             assert!(
                 !self.ann_token.contains_key(&your_address),
                 "This address has already created an ANN token and you cannot create another."
@@ -1149,7 +1144,6 @@ mod radixdao {
             let desired_resource_address: ResourceAddress = desired_ann_token.resource_address();
 
             if !self.ann_tokens.contains_key(&desired_resource_address) {
-
                 self.ann_tokens.insert(
                     desired_resource_address,
                     Vault::new(desired_resource_address),
@@ -1164,7 +1158,7 @@ mod radixdao {
             &mut self,
             ann_token_creator_address: ComponentAddress,
             payment: Bucket,
-        ) -> Bucket{
+        ) -> Bucket {
             assert!(
                 self.ann_token.contains_key(&ann_token_creator_address),
                 "No ANN Token created by the specified address."
@@ -1314,8 +1308,6 @@ mod radixdao {
         pub fn get_all_contributors(&self) -> HashMap<ComponentAddress, Decimal> {
             self.contributors.clone()
         }
-
-        
 
         // pub fn execute_proposal_for_pandao(&mut self){
         //     match self.current_praposal{
@@ -1498,6 +1490,65 @@ mod radixdao {
             }
             return Err(format!("proposal with id : {proposal_id} not found"));
         }
+
+        pub fn check_time_until_next_payout(
+            &self,
+            ann_token_creator_address: ComponentAddress,
+        ) -> Result<i64, String> {
+            if let Some(ann_token_components) = self.ann_token.get(&ann_token_creator_address) {
+                let latest_ann_component = ann_token_components
+                    .last()
+                    .ok_or_else(|| "No ANN token component found".to_string())?;
+
+                Ok(latest_ann_component.check_time_until_next_payout())
+            } else {
+                Err("No ANN Token created by the specified address.".to_string())
+            }
+        }
+
+        //claim annual payout
+
+        pub fn claim_annual_payout(
+            &mut self,
+            ann_token_creator_address: ComponentAddress,
+            annuity_token: Bucket,
+        ) -> Result<(Bucket, Bucket), String> {
+            if let Some(ann_token_components) = self.ann_token.get_mut(&ann_token_creator_address) {
+                let latest_ann_component = ann_token_components
+                    .last_mut()
+                    .ok_or_else(|| "No ANN token component found".to_string())?;
+
+                let (annuity_token, payout) =
+                    latest_ann_component.claim_annual_payout(annuity_token);
+
+                // self.update_ann_vault_and_store(annuity_token);
+
+                Ok((annuity_token, payout))
+            } else {
+                Err("No ANN Token created by the specified address.".to_string())
+            }
+        }
+
+        // pub fn claim_the_payout(&mut self, ann_token_creator_address: ComponentAddress) -> Result<(Bucket, Bucket), String>{
+        //     if let Some(ann_token_components) = self.ann_token.get_mut(&ann_token_creator_address) {
+
+        //         let latest_ann_component = ann_token_components
+        //             .last_mut()
+        //             .ok_or_else(|| "No ANN token component found".to_string())?;
+
+        //         //make sure to have ANN token creation per address 
+
+        //         let annuity_token = self.
+
+        //         // latest_ann_component.claim_annual_payout(annuity_token);
+               
+                
+
+        //         Ok((annuity_token, payout))
+        //     } else {
+        //         Err("No ANN Token created by the specified address.".to_string())
+        //     }
+        // }
     }
 }
 
