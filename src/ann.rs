@@ -37,6 +37,7 @@ mod annuity {
         price: Decimal,
         annual_payout: Decimal,
         last_payout_epoch: u64,
+        resource_address_of_anns : ResourceAddress
     }
 
     impl Annuity {
@@ -67,6 +68,8 @@ mod annuity {
 
             let annual_payout = notional_principal / Decimal::from(5);
 
+            let ra_ann = bucket_of_annuities.resource_address();
+
             Self {
                 contract_type,
                 contract_role,
@@ -82,10 +85,15 @@ mod annuity {
                 price,
                 annual_payout,
                 last_payout_epoch: initial_exchange_date,
+                resource_address_of_anns : ra_ann
             }
             .instantiate()
             .prepare_to_globalize(OwnerRole::None)
             .globalize()
+        }
+
+        pub fn get_annuity_address(&self)-> ResourceAddress{
+            return self.resource_address_of_anns;
         }
 
         pub fn purchase_annuity(&mut self, mut payment: Bucket) -> (Bucket, Bucket) {

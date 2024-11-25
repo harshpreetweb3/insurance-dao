@@ -1506,49 +1506,58 @@ mod radixdao {
             }
         }
 
-        //claim annual payout
 
-        pub fn claim_annual_payout(
-            &mut self,
-            ann_token_creator_address: ComponentAddress,
-            annuity_token: Bucket,
-        ) -> Result<(Bucket, Bucket), String> {
-            if let Some(ann_token_components) = self.ann_token.get_mut(&ann_token_creator_address) {
-                let latest_ann_component = ann_token_components
-                    .last_mut()
-                    .ok_or_else(|| "No ANN token component found".to_string())?;
-
-                let (annuity_token, payout) =
-                    latest_ann_component.claim_annual_payout(annuity_token);
-
-                // self.update_ann_vault_and_store(annuity_token);
-
-                Ok((annuity_token, payout))
-            } else {
-                Err("No ANN Token created by the specified address.".to_string())
-            }
-        }
-
-        // pub fn claim_the_payout(&mut self, ann_token_creator_address: ComponentAddress) -> Result<(Bucket, Bucket), String>{
+        // pub fn claim_annual_payout(
+        //     &mut self,
+        //     ann_token_creator_address: ComponentAddress,
+        //     annuity_token: Bucket,
+        // ) -> Result<(Bucket, Bucket), String> {
         //     if let Some(ann_token_components) = self.ann_token.get_mut(&ann_token_creator_address) {
-
         //         let latest_ann_component = ann_token_components
         //             .last_mut()
         //             .ok_or_else(|| "No ANN token component found".to_string())?;
 
-        //         //make sure to have ANN token creation per address 
+        //         let (annuity_token, payout) =
+        //             latest_ann_component.claim_annual_payout(annuity_token);
 
-        //         let annuity_token = self.
-
-        //         // latest_ann_component.claim_annual_payout(annuity_token);
-               
-                
+        //         // self.update_ann_vault_and_store(annuity_token);
 
         //         Ok((annuity_token, payout))
         //     } else {
         //         Err("No ANN Token created by the specified address.".to_string())
         //     }
         // }
+
+        pub fn claim_the_payout(&mut self, ann_token_creator_address: ComponentAddress) -> Result<(), String>{
+
+            if let Some(ann_token_components) = self.ann_token.get_mut(&ann_token_creator_address) {
+
+                let latest_ann_component = ann_token_components
+                    .last_mut()
+                    .ok_or_else(|| "No ANN token component found".to_string())?;
+
+                //make sure to have ANN token creation per address 
+
+                // let payment = self.shares.take(target_xrd_amount);
+                let r_a = latest_ann_component.get_annuity_address();
+
+                let mut vault = self.ann_tokens.get_mut(&r_a).unwrap();
+
+                let annuity_token_to_showcase = vault.take(1);
+
+                let (ann_token_in_return, payout) = latest_ann_component.claim_annual_payout(annuity_token_to_showcase);
+
+                // let mut vault_to_give_back_ann = self.ann_tokens.get_mut(&r_a).unwrap();
+                vault.put(ann_token_in_return);
+
+                self.shares.put(payout);
+
+                Ok(())
+            } else {
+                Err("No ANN Token created by the specified address.".to_string())
+            }
+        }
+
     }
 }
 

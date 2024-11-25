@@ -1,5 +1,5 @@
 CALL_METHOD
-Address("component_tdx_2_1cqrzsl6t0865fdum8laat90m9ljl2vwgdlud47r4v0zaplw2ca5kfd")
+Address("component_tdx_2_1cqcdq3zq65z7lxwxd4dkfc75850n9qraannezvdtclpclueuva95kv")
 "issue_ann_token"
 "ANN"
 "ANN"
@@ -12,5 +12,5 @@ Decimal("50")
 "long"
 Decimal("50")
 Decimal("13")
-Address("account_tdx_2_128e6fmjkhjqx0n8h9562rrvstl883wq22pzea4ucnnx0762ptlch4s")
+Address("account_tdx_2_1280l7wkzy35dsgvknl3xdh2q8uq7xluven2ycplrflqfqjkveuha90")
 ;
