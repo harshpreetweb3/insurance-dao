@@ -854,9 +854,8 @@ mod radixdao {
 
                 // Check if the minimum quorum is met
                 let number_of_voters = proposal.get_number_of_voters();
-                let min_quo = proposal.get_minimum_quorum();
-                let minimum_quorum =
-                    min_quo.0.to_u64().expect("Invalid minimum quorum value") as usize;
+                let minimum_quorum = proposal.get_minimum_quorum();
+                // let minimum_quorum = min_quo.0.to_u64().expect("Invalid minimum quorum value") as usize;
 
                 if number_of_voters < minimum_quorum {
                     // Emit an event indicating that the proposal cannot be executed due to insufficient participation
@@ -1018,10 +1017,10 @@ mod radixdao {
             your_address: ComponentAddress, //      ISSUER ADDRESS
         ) -> Global<Annuity> {
 
-            assert!(
-                !self.ann_token.contains_key(&your_address),
-                "This address has already created an ANN token and you cannot create another."
-            );
+            // assert!(
+            /// /    !self.ann_token.contains_key(&your_address),
+            //     "This address has already created an ANN token and you cannot create another."
+            // );
 
             let ann_token_component = Annuity::instantiate_annuity(
                 contract_type.clone(),

@@ -239,14 +239,14 @@ pub struct AnnuityTokenCreation {
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct ProposalQuorumNotMet {
     pub proposal_id: usize,
-    pub minimum_quorum: Decimal,
+    pub minimum_quorum: usize,
     pub number_of_voters: usize,
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct ProposalQuorumMet {
     pub proposal_id: usize,
-    pub minimum_quorum: Decimal,
+    pub minimum_quorum: usize,
     pub number_of_voters: usize,
 }
 
