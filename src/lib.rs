@@ -72,26 +72,15 @@ mod radixdao {
             purpose: String,
 
             proposal_creation_right: ProposalCreationRight,
+
+            token_name : String
+
         ) -> (Global<TokenWeigtedDao>, Bucket) {
             // reserve an address for the DAO component
             let (address_reservation, _) =
                 Runtime::allocate_component_address(TokenWeigtedDao::blueprint_id());
 
             let owner_badge_description = format!("{}'s owner badge", &organization_name);
-
-            // ! create a owner role, this role is only for changing the praposal and inserting a new praposal
-
-            // this is not seen by me as of yet
-            // ! Being a DAO, proposal can be created by any person
-
-            // * owner badge creation
-            // * Moreover this is fungible token (IT MUST BE NON_FUNGIBLE)
-
-            // Owner Badge Creation: Creates a non-divisible owner badge with metadata containing
-            // the organization's name and icon URL.
-            // ! This badge likely represents administrative control over the DAO.
-
-            // * THERE CANNOT BE ADMINISTRATIVE CONTROL
 
             let owner_badge: Bucket = ResourceBuilder::new_fungible(OwnerRole::None)
                 .divisibility(0)
@@ -105,7 +94,7 @@ mod radixdao {
                 .into();
 
             // create nft to be sold for voting purpose
-            let dao_token_description = format!("{} voting share", &organization_name);
+            let dao_token_description = format!("{} voting share", &token_name);
 
             let voting_power_tokens: Bucket = ResourceBuilder::new_fungible(OwnerRole::None)
                 .divisibility(divisibility)
@@ -123,6 +112,8 @@ mod radixdao {
 
             let component: Global<TokenWeigtedDao>;
 
+
+
             match proposal_creation_right {
                 ProposalCreationRight::EVERYONE => {
                     component = Self {
@@ -159,6 +150,46 @@ mod radixdao {
                     ))))
                     .with_address(address_reservation.clone())
                     .globalize();
+
+                    let component_address = component.address();
+
+                    let event_metadata = TokenWightedDeployment {
+                        component_address,
+
+                        token_address: dao_token_address,
+
+                        owner_token_address: owner_token_addresss,
+
+                        community_name: organization_name,
+
+                        community_image: org_ico_url,
+
+                        token_price,
+
+                        token_buy_back_price,
+
+                        description,
+
+                        total_token: token_supply,
+
+                        token_image: power_token_url,
+
+                        tags: tags.clone(),
+
+                        purpose: purpose.clone(),
+
+                        proposal_creation_right: ProposalCreationRight::EVERYONE,
+                    };
+
+                    Runtime::emit_event(PandaoEvent {
+                        // event_type: EventType::PROPOSAL_CREATION_RIGHT,
+                        event_type: EventType::DEPLOYMENT,
+                        dao_type: DaoType::Insurance,
+                        component_address,
+                        meta_data: DaoEvent::TokenWeightedDEployment(event_metadata),
+                    });
+                
+
                 }
                 ProposalCreationRight::TOKEN_HOLDER_THRESHOLD(threshold) => {
                     component = Self {
@@ -197,160 +228,9 @@ mod radixdao {
                     ))))
                     .with_address(address_reservation.clone())
                     .globalize();
-                }
-                ProposalCreationRight::ADMIN => {
-                    component = Self {
-                        token_price: token_price.clone(),
 
-                        organization_name: organization_name.clone(),
+                    let component_address = component.address();
 
-                        dao_token_address: dao_token_address.clone(),
-
-                        owner_token_addresss: owner_token_addresss.clone(),
-
-                        current_praposals: HashMap::new(),
-
-                        dao_token_resource_manager: voting_power_tokens.resource_manager(),
-
-                        dao_token: Vault::with_bucket(voting_power_tokens),
-
-                        buy_back_price: token_buy_back_price.clone(),
-
-                        shares: Vault::new(XRD),
-
-                        ann_tokens: HashMap::new(),
-
-                        // Initialize zero_coupon_bond as None
-                        ann_token: HashMap::new(),
-
-                        contributors: HashMap::new(),
-
-                        proposal_creation_right: ProposalCreationRight::ADMIN,
-                    }
-                    .instantiate()
-                    .prepare_to_globalize(OwnerRole::Fixed(rule!(require(
-                        owner_token_addresss.clone()
-                    ))))
-                    .with_address(address_reservation.clone())
-                    .globalize();
-                }
-            }
-
-            // let component = Self {
-            //     token_price: token_price.clone(),
-
-            //     organization_name: organization_name.clone(),
-
-            //     dao_token_address: dao_token_address.clone(),
-
-            //     owner_token_addresss: owner_token_addresss.clone(),
-
-            //     current_praposals: HashMap::new(),
-
-            //     dao_token_resource_manager: voting_power_tokens.resource_manager(),
-
-            //     dao_token: Vault::with_bucket(voting_power_tokens),
-
-            //     buy_back_price: token_buy_back_price.clone(),
-
-            //     shares: Vault::new(XRD),
-
-            //     bonds: HashMap::new(),
-
-            //     // Initialize zero_coupon_bond as None
-            //     zero_coupon_bond: HashMap::new(),
-
-            //     contributors: HashMap::new(),
-
-            //     proposal_creation_right: proposal_creation_right.clone(),
-            // }
-            // .instantiate()
-            // .prepare_to_globalize(OwnerRole::Fixed(rule!(require(
-            //     owner_token_addresss.clone()
-            // ))))
-            // .with_address(address_reservation.clone())
-            // .globalize();
-
-            let component_address = component.address();
-
-            // create a metadata for event named TokenWeightedDeployment
-            // let event_metadata = TokenWightedDeployment {
-            //     component_address,
-
-            //     token_address: dao_token_address,
-
-            //     owner_token_address: owner_token_addresss,
-
-            //     community_name: organization_name,
-
-            //     community_image: org_ico_url,
-
-            //     token_price,
-
-            //     token_buy_back_price,
-
-            //     description,
-
-            //     total_token: token_supply,
-
-            //     token_image: power_token_url,
-
-            //     tags: tags.clone(),
-
-            //     purpose: purpose.clone(),
-            // };
-
-            // emit event | event emission
-            // Runtime::emit_event(PandaoEvent {
-            //     event_type: EventType::DEPLOYMENT,
-
-            //     dao_type: DaoType::Insurance,
-
-            //     component_address,
-
-            //     meta_data: DaoEvent::TokenWeightedDEployment(event_metadata),
-            // });
-
-            // Emit specific events based on the proposal creation right
-            match proposal_creation_right {
-                ProposalCreationRight::EVERYONE => {
-                    let event_metadata = TokenWightedDeployment {
-                        component_address,
-
-                        token_address: dao_token_address,
-
-                        owner_token_address: owner_token_addresss,
-
-                        community_name: organization_name,
-
-                        community_image: org_ico_url,
-
-                        token_price,
-
-                        token_buy_back_price,
-
-                        description,
-
-                        total_token: token_supply,
-
-                        token_image: power_token_url,
-
-                        tags: tags.clone(),
-
-                        purpose: purpose.clone(),
-
-                        proposal_creation_right: ProposalCreationRight::EVERYONE,
-                    };
-
-                    Runtime::emit_event(PandaoEvent {
-                        // event_type: EventType::PROPOSAL_CREATION_RIGHT,
-                        event_type: EventType::DEPLOYMENT,
-                        dao_type: DaoType::Insurance,
-                        component_address,
-                        meta_data: DaoEvent::TokenWeightedDEployment(event_metadata),
-                    });
-                }
-                ProposalCreationRight::TOKEN_HOLDER_THRESHOLD(threshold) => {
                     let event_metadata = TokenWightedDeployment {
                         component_address,
 
@@ -388,8 +268,46 @@ mod radixdao {
                         component_address,
                         meta_data: DaoEvent::TokenWeightedDEployment(event_metadata),
                     });
+
                 }
                 ProposalCreationRight::ADMIN => {
+                    component = Self {
+                        token_price: token_price.clone(),
+
+                        organization_name: organization_name.clone(),
+
+                        dao_token_address: dao_token_address.clone(),
+
+                        owner_token_addresss: owner_token_addresss.clone(),
+
+                        current_praposals: HashMap::new(),
+
+                        dao_token_resource_manager: voting_power_tokens.resource_manager(),
+
+                        dao_token: Vault::with_bucket(voting_power_tokens),
+
+                        buy_back_price: token_buy_back_price.clone(),
+
+                        shares: Vault::new(XRD),
+
+                        ann_tokens: HashMap::new(),
+
+                        // Initialize zero_coupon_bond as None
+                        ann_token: HashMap::new(),
+
+                        contributors: HashMap::new(),
+
+                        proposal_creation_right: ProposalCreationRight::ADMIN,
+                    }
+                    .instantiate()
+                    .prepare_to_globalize(OwnerRole::Fixed(rule!(require(
+                        owner_token_addresss.clone()
+                    ))))
+                    .with_address(address_reservation.clone())
+                    .globalize();
+
+                    let component_address = component.address();
+
                     let event_metadata = TokenWightedDeployment {
                         component_address,
 
@@ -425,12 +343,10 @@ mod radixdao {
                         component_address,
                         meta_data: DaoEvent::TokenWeightedDEployment(event_metadata),
                     });
+                    
                 }
             }
 
-            //Event emission in blockchain systems is primarily used for transparency,
-            //enabling tracking of significant actions and changes in state,
-            //and facilitating communication between smart contracts and external applications.
             (component, owner_badge)
         }
 
