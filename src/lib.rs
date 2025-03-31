@@ -16,11 +16,9 @@ mod radixdao {
     use proposal::pandao_praposal::TokenWeightProposal;
     use scrypto::address;
     // use scrypto_test::prelude::drop_fungible_bucket;
-
     use ann::annuity::Annuity;
 
     pub struct TokenWeigtedDao {
-        // current_praposal: Option<Global<TokenWeightProposal>>,
         current_praposals: HashMap<ComponentAddress, HashMap<usize, Global<TokenWeightProposal>>>,
 
         dao_token_resource_manager: ResourceManager,
@@ -31,7 +29,7 @@ mod radixdao {
 
         shares: Vault,
 
-        ann_tokens: HashMap<ResourceAddress, Vault>,
+        ann_tokens: HashMap<ResourceAddress, Vault>, 
 
         dao_token_address: ResourceAddress,
 
@@ -41,8 +39,7 @@ mod radixdao {
 
         buy_back_price: Decimal,
 
-        // Add ZeroCouponBond component
-        ann_token: HashMap<ComponentAddress, Vec<Global<Annuity>>>, // NAME CHANGED
+        ann_token: HashMap<ComponentAddress, Vec<Global<Annuity>>>, 
 
         contributors: HashMap<ComponentAddress, Decimal>,
 
@@ -343,7 +340,7 @@ mod radixdao {
                         component_address,
                         meta_data: DaoEvent::TokenWeightedDEployment(event_metadata),
                     });
-                    
+
                 }
             }
 
@@ -548,23 +545,6 @@ mod radixdao {
                 }
             }
 
-            // let (global_proposal_component, _) = TokenWeightProposal::new(
-            //     title.clone(),
-            //     description.clone(),
-            //     minimun_quorum,
-            //     start_time,
-            //     end_time,
-            //     self.owner_token_addresss.clone(),
-            //     self.dao_token_address.clone(),
-            //     address_issued_bonds_to_sell.clone(),
-            //     target_xrd_amount.clone(),
-            //     proposal_creator_address,
-            //     amount_of_tokens_should_be_minted,
-            //     VotingType::Equality
-            // );
-
-            // global_proposal_component.callme("string".into()) ;
-
             let start_time_ts: i64 = start_time.to_instant().seconds_since_unix_epoch;
             let end_time_ts: i64 = end_time.to_instant().seconds_since_unix_epoch;
 
@@ -580,31 +560,6 @@ mod radixdao {
                 .or_insert_with(HashMap::new);
 
             inner_map.insert(proposal_id, global_proposal_component);
-
-            // let praposal_metadata = PraposalMetadata {
-            //     title,
-            //     description,
-            //     minimum_quorum: minimun_quorum.into(),
-            //     end_time_ts,
-            //     start_time_ts,
-            //     owner_token_address: self.owner_token_addresss.clone(),
-            //     component_address: global_proposal_component.address(),
-            //     address_issued_bonds_to_sell,
-            //     target_xrd_amount,
-            //     proposal_creator_address,
-            //     amount_of_tokens_should_be_minted,
-            //     proposal_id,
-            //     governance_token_or_owner_token_address: governance_token_or_owner_token_address
-            //         .resource_address(),
-            // };
-            // let component_address = Runtime::global_address();
-
-            // Runtime::emit_event(PandaoEvent {
-            //     event_type: EventType::PRAPOSAL,
-            //     dao_type: DaoType::Insurance,
-            //     meta_data: DaoEvent::PraposalDeployment(praposal_metadata),
-            //     component_address,
-            // });
 
             match voting_type {
                 VotingType::ResourceHold => {
@@ -674,58 +629,6 @@ mod radixdao {
                 governance_token_or_owner_token_address,
             )
         }
-
-        pub fn get_created_proposals(
-            &self,
-            your_address: ComponentAddress,
-        ) -> Result<HashMap<usize, Global<TokenWeightProposal>>, String> {
-            let inner_map = self.current_praposals.get(&your_address);
-            match inner_map {
-                Some(map) => {
-                    let map = map;
-                    Ok(map.clone())
-                }
-                None => Err(format!("this addres has no created proposals")),
-            }
-        }
-
-        pub fn get_proposal_using_proposal_id(
-            &self,
-            proposal_id: usize,
-        ) -> Result<Global<TokenWeightProposal>, String> {
-            for (_, inner_map) in &self.current_praposals {
-                let proposal = inner_map.get(&proposal_id);
-                match proposal {
-                    Some(proposal) => return Ok(proposal.clone()),
-                    None => return Err(format!("proposal with id : {proposal_id} not found")),
-                }
-            }
-            return Err(format!("proposal with id : {proposal_id} not found"));
-        }
-
-        pub fn get_all_proposals(&self) -> Vec<Global<TokenWeightProposal>> {
-            let mut all_proposals: Vec<Global<TokenWeightProposal>> = Vec::new();
-            for (_, inner_map) in &self.current_praposals {
-                for (_, proposal) in inner_map {
-                    all_proposals.push(proposal.clone());
-                }
-            }
-            all_proposals
-        }
-
-        // fn execute_proposal(&self, proposal_id : usize){
-        //     let mut bond_creator_address_option : Option<ComponentAddress>  = None;
-        //     let mut target_xrd_amount_option : Option<Decimal> = None;
-        //     let mut proposal_option : Option<Global<TokenWeightProposal>> = None;
-
-        //     for(_, inner_map) in &self.current_praposals{
-        //         if let Some(proposal) = inner_map.get(&proposal_id){
-        //             proposal_option = Some(proposal.clone());
-
-        //         }
-        //     }
-
-        // }
 
         pub fn execute_proposal(&mut self, proposal_id: usize) {
             // First, find the proposal
@@ -1451,11 +1354,14 @@ mod radixdao {
                     .last_mut()
                     .ok_or_else(|| "No ANN token component found".to_string())?;
 
-                //make sure to have ANN token creation per address 
+                //make sure to have ANN token creation per address; removed 
 
                 // let payment = self.shares.take(target_xrd_amount);
+
+                //token resource_address
                 let r_a = latest_ann_component.get_annuity_address();
 
+                
                 let mut vault = self.ann_tokens.get_mut(&r_a).unwrap();
 
                 let annuity_token_to_showcase = vault.take(1);

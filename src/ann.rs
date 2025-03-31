@@ -124,27 +124,44 @@ mod annuity {
                 "Invalid annuity resource."
             );
 
-            let current_epoch =
-                Clock::current_time_rounded_to_seconds().seconds_since_unix_epoch as u64;
+            // let current_epoch =
+            //     Clock::current_time_rounded_to_seconds().seconds_since_unix_epoch as u64;
+
+            let now = Clock::current_time_rounded_to_seconds();
+            let current_time_seconds = now.seconds_since_unix_epoch;
 
             //notice it gives out timestamp in integer which contains non-fractional values
 
             let seconds_in_year = 365 * 24 * 60 * 60;
             //31536000
 
-            let years_elapsed = (current_epoch - self.last_payout_epoch) / seconds_in_year;
+            //year elapsed since last payout
+
+            let prev_payout_claimed_at = self.last_payout_epoch;
+
+            let years_elapsed = (current_time_seconds - self.last_payout_epoch as i64) / seconds_in_year;
 
             if years_elapsed >= 1 {
+
                 let interest_payment =
-                    self.notional_principal * self.nominal_interest_rate / Decimal::from(5);
+                    self.notional_principal * self.nominal_interest_rate / Decimal::from(500) ;
+
                 let total_payout = self.annual_payout + interest_payment;
+
                 let payout = self.collected_xrd.take(total_payout);
-                self.last_payout_epoch = current_epoch;
+
+                self.last_payout_epoch = current_time_seconds as u64;
+
+                let remaining_time = seconds_in_year - (current_time_seconds - self.last_payout_epoch as i64);
 
                 let message = format!("You can have successfully claimed your annual payout");
 
                 let event_metadata = ClaimAnnualPayout {
-                    message
+                    message,
+                    annual_payout_redeemed : true,
+                    payout_claimed_at : Some(current_time_seconds as u64),
+                    prev_payout_claimed_at : Some(prev_payout_claimed_at),
+                    remaining_time_to_next_payout : remaining_time
                 };
 
                 Runtime::emit_event(PandaoEvent {
@@ -159,12 +176,17 @@ mod annuity {
             } else {
 
                 let empty_bucket = self.collected_xrd.take(0);
-                let remaining_time = seconds_in_year - (current_epoch - self.last_payout_epoch);
+                
+                let remaining_time = seconds_in_year - (current_time_seconds - self.last_payout_epoch as i64);
 
                 let message = format!("You can claim your annual payout after {} seconds.", remaining_time);
 
                 let event_metadata = ClaimAnnualPayout {
-                    message
+                    message,
+                    annual_payout_redeemed : false,
+                    payout_claimed_at : Some(prev_payout_claimed_at),
+                    prev_payout_claimed_at : Some(prev_payout_claimed_at),
+                    remaining_time_to_next_payout : remaining_time
                 };
 
                 Runtime::emit_event(PandaoEvent {
@@ -185,10 +207,8 @@ mod annuity {
 // component_sim1cp4qmcqlmtsqns8ckwjttvffjk4j4smkhlkt0qv94caftlj5u2xve2
 // resim show component_sim1cp4qmcqlmtsqns8ckwjttvffjk4j4smkhlkt0qv94caftlj5u2xve2
 // resim show account_sim1c956qr3kxlgypxwst89j9yf24tjc7zxd4up38x37zr6q4jxdx9rhma
-
 // resim call-method component_sim1cp4qmcqlmtsqns8ckwjttvffjk4j4smkhlkt0qv94caftlj5u2xve2 get_annuity_details
 // resim call-method component_sim1cp4qmcqlmtsqns8ckwjttvffjk4j4smkhlkt0qv94caftlj5u2xve2 purchase_annuity resource_sim1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxakj8n3:1000
 // resim call-method component_sim1cp4qmcqlmtsqns8ckwjttvffjk4j4smkhlkt0qv94caftlj5u2xve2 claim_annual_payout resource_sim1t4h3kupr5l95w6ufpuysl0afun0gfzzw7ltmk7y68ks5ekqh4cpx9w:1
 // resim call-method component_sim1cp4qmcqlmtsqns8ckwjttvffjk4j4smkhlkt0qv94caftlj5u2xve2 check_time_until_next_payout
-
 // package_tdx_2_1pklk5h22xd2exahfhckcgay7ew8ggj54wctwc6w5yrxyqm65yeu3r6

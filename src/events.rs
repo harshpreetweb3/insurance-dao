@@ -250,7 +250,13 @@ pub struct ProposalQuorumMet {
     pub number_of_voters: usize,
 }
 
+
+
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct ClaimAnnualPayout {
-    pub message : String
+    pub message : String,
+    pub annual_payout_redeemed : bool,
+    pub payout_claimed_at : Option<u64>,
+    pub prev_payout_claimed_at : Option<u64>,
+    pub remaining_time_to_next_payout : i64
 }
