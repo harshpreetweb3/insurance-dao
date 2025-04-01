@@ -27,7 +27,11 @@ pub enum EventType {
 
     ANNUAL_PAYOUT_CLAIMED,
 
-    ANNUAL_PAYOUT_COULD_NOT_BE_CLAIMED
+    COLLATERAL_LIQUIDATED,
+
+    ANNUAL_PAYOUT_COULD_NOT_BE_CLAIMED,
+
+    TAKEN_OUT_INVESTED_XRDS
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
@@ -122,7 +126,9 @@ pub enum DaoEvent {
 
                                           // ProposalCreationRightAdmin
 
-    ClaimAnnualPayout(ClaimAnnualPayout)
+    ClaimAnnualPayout(ClaimAnnualPayout),
+    CollateralLiquidated(LiquidatedCollateral),
+    TakenOutInvestedXRD(TakenOutInvestedXRD)
 }
 
 // #[derive(ScryptoSbor, ScryptoEvent)]
@@ -254,9 +260,26 @@ pub struct ProposalQuorumMet {
 
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct ClaimAnnualPayout {
-    pub message : String,
+    // pub message : String,
     pub annual_payout_redeemed : bool,
     pub payout_claimed_at : Option<u64>,
     pub prev_payout_claimed_at : Option<u64>,
     pub remaining_time_to_next_payout : i64
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct LiquidatedCollateral {
+    // pub message : String,
+    // pub collateral_liquidated : bool,
+    pub collateral_resource_address : ResourceAddress,
+    pub collateral_amount : Decimal,
+    pub liquidated_at : Option<u64>,
+    pub prev_payout_claimed_at : Option<u64>,
+    // pub remaining_time_to_next_payout : i64
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct TakenOutInvestedXRD {
+    pub ann_creator_address : ComponentAddress,
+    pub taken_out_amount : Decimal
 }

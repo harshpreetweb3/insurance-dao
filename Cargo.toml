@@ -4,6 +4,7 @@ version = "1.0.0"
 edition = "2021"
 
 [dependencies]
+chrono = "0.4"
 scrypto = { version = "1.2.0" }
 
 [dev-dependencies]

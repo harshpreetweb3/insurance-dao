@@ -29,7 +29,7 @@ mod radixdao {
 
         shares: Vault,
 
-        ann_tokens: HashMap<ResourceAddress, Vault>, 
+        ann_tokens: HashMap<ResourceAddress, Vault>,
 
         dao_token_address: ResourceAddress,
 
@@ -39,11 +39,13 @@ mod radixdao {
 
         buy_back_price: Decimal,
 
-        ann_token: HashMap<ComponentAddress, Vec<Global<Annuity>>>, 
+        ann_token: HashMap<ComponentAddress, Vec<Global<Annuity>>>,
 
         contributors: HashMap<ComponentAddress, Decimal>,
 
         proposal_creation_right: ProposalCreationRight,
+
+        liquidated_collateral: Vault,
     }
 
     impl TokenWeigtedDao {
@@ -70,8 +72,7 @@ mod radixdao {
 
             proposal_creation_right: ProposalCreationRight,
 
-            token_name : String
-
+            token_name: String,
         ) -> (Global<TokenWeigtedDao>, Bucket) {
             // reserve an address for the DAO component
             let (address_reservation, _) =
@@ -109,8 +110,6 @@ mod radixdao {
 
             let component: Global<TokenWeigtedDao>;
 
-
-
             match proposal_creation_right {
                 ProposalCreationRight::EVERYONE => {
                     component = Self {
@@ -140,6 +139,8 @@ mod radixdao {
                         contributors: HashMap::new(),
 
                         proposal_creation_right: ProposalCreationRight::EVERYONE,
+
+                        liquidated_collateral: Vault::new(XRD),
                     }
                     .instantiate()
                     .prepare_to_globalize(OwnerRole::Fixed(rule!(require(
@@ -185,8 +186,6 @@ mod radixdao {
                         component_address,
                         meta_data: DaoEvent::TokenWeightedDEployment(event_metadata),
                     });
-                
-
                 }
                 ProposalCreationRight::TOKEN_HOLDER_THRESHOLD(threshold) => {
                     component = Self {
@@ -218,6 +217,8 @@ mod radixdao {
                         proposal_creation_right: ProposalCreationRight::TOKEN_HOLDER_THRESHOLD(
                             threshold,
                         ),
+
+                        liquidated_collateral: Vault::new(XRD),
                     }
                     .instantiate()
                     .prepare_to_globalize(OwnerRole::Fixed(rule!(require(
@@ -265,7 +266,6 @@ mod radixdao {
                         component_address,
                         meta_data: DaoEvent::TokenWeightedDEployment(event_metadata),
                     });
-
                 }
                 ProposalCreationRight::ADMIN => {
                     component = Self {
@@ -295,6 +295,8 @@ mod radixdao {
                         contributors: HashMap::new(),
 
                         proposal_creation_right: ProposalCreationRight::ADMIN,
+
+                        liquidated_collateral: Vault::new(XRD),
                     }
                     .instantiate()
                     .prepare_to_globalize(OwnerRole::Fixed(rule!(require(
@@ -340,7 +342,6 @@ mod radixdao {
                         component_address,
                         meta_data: DaoEvent::TokenWeightedDEployment(event_metadata),
                     });
-
                 }
             }
 
@@ -833,11 +834,11 @@ mod radixdao {
             annuity_position: String,
             price: Decimal,
             number_of_annuities_to_mint: Decimal,
-            your_address: ComponentAddress, //      ISSUER ADDRESS
+            your_address: ComponentAddress,
+            nft_as_a_collateral: Bucket,
         ) -> Global<Annuity> {
-
             // assert!(
-            /// /    !self.ann_token.contains_key(&your_address),
+            //    !self.ann_token.contains_key(&your_address),
             //     "This address has already created an ANN token and you cannot create another."
             // );
 
@@ -853,6 +854,7 @@ mod radixdao {
                 annuity_position.clone(),
                 price.clone(),
                 number_of_annuities_to_mint.clone(),
+                nft_as_a_collateral,
             );
 
             self.ann_token
@@ -886,78 +888,6 @@ mod radixdao {
             ann_token_component
         }
 
-        // CREATE ANN TOKEN | ISSUE ANN TOKEN
-        // pub fn create_zero_coupon_bond(
-        //     &mut self,
-        //     contract_type: String,
-        //     contract_role: String,
-        //     contract_identifier: String,
-        //     nominal_interest_rate: Decimal,
-        //     currency: String,
-        //     initial_exchange_date: u64,
-        //     maturity_date: u64,
-        //     notional_principal: Decimal,
-        //     discount: u64,
-        //     bond_position: String,
-        //     price: Decimal,
-        //     number_of_bonds: Decimal,
-        //     your_address: ComponentAddress, //OK -> Account address is of ComponentAddress Type
-        // ) -> Global<ZeroCouponBond> {
-        //     // Ensure the address has not created any bonds already
-        //     assert!(
-        // /    !self.zero_coupon_bond.contains_key(&your_address),
-        //         "This address has already created a bond and cannot create another."
-        //     );
-
-        //     let bond_component = ZeroCouponBond::instantiate_zerocouponbond(
-        //         contract_type.clone(),
-        //         contract_role.clone(),
-        //         contract_identifier.clone(),
-        //         nominal_interest_rate,
-        //         currency.clone(),
-        //         initial_exchange_date,
-        //         maturity_date,
-        //         notional_principal,
-        //         discount,
-        //         bond_position.clone(),
-        //         price,
-        //         number_of_bonds,
-        //     );
-
-        //     self.zero_coupon_bond
-        //         .entry(your_address)
-        //         .or_insert_with(Vec::new)
-        //         .push(bond_component);
-        //     // self.zero_coupon_bond = Some(bond_component);
-
-        //     // Emit the ZeroCouponBondCreation event
-        //     let event_metadata = ZeroCouponBondCreation {
-        //         component_address: bond_component.address(),
-        //         contract_type,
-        //         contract_role,
-        //         contract_identifier,
-        //         nominal_interest_rate,
-        //         currency,
-        //         initial_exchange_date,
-        //         maturity_date,
-        //         notional_principal,
-        //         discount,
-        //         bond_position,
-        //         price,
-        //         number_of_bonds,
-        //         creator_address: your_address,
-        //     };
-
-        //     Runtime::emit_event(PandaoEvent {
-        //         event_type: EventType::ZERO_COUPON_BOND_CREATION, // You can define a specific event type for bond creation if needed
-        //         dao_type: DaoType::Insurance,
-        //         component_address: Runtime::global_address(),
-        //         meta_data: DaoEvent::ZeroCouponBondCreation(event_metadata),
-        //     });
-
-        //     bond_component
-        // }
-
         pub fn update_ann_vault_and_store(&mut self, desired_ann_token: Bucket) {
             let desired_resource_address: ResourceAddress = desired_ann_token.resource_address();
 
@@ -990,59 +920,6 @@ mod radixdao {
             payment
         }
 
-        // New method to sell a bond
-        // pub fn sell_bond(
-        //     &mut self,
-        //     bond_creator_address: ComponentAddress,
-        //     bond: Bucket,
-        // ) -> Bucket {
-        //     assert!(
-        //         self.ann_token.contains_key(&bond_creator_address),
-        //         "No bonds created by the specified address."
-        //     );
-
-        //     // Retrieve the most recent bond component created by the bond creator
-        //     let bond_components = self
-        //         .ann_token
-        //         .get_mut(&bond_creator_address)
-        //         .unwrap();
-        //     let latest_bond_component =
-        //         bond_components.last_mut().expect("No bond component found");
-
-        //     // Sell bond from the latest bond component
-        //     latest_bond_component.sell_the_bond(bond)
-        // }
-
-        // New method to check bond maturity
-        // pub fn check_bond_maturity(&self, bond_creator_address: ComponentAddress) -> i64 {
-        //     assert!(
-        //         self.zero_coupon_bond.contains_key(&bond_creator_address),
-        //         "No bonds created by the specified address."
-        //     );
-
-        //     // Retrieve the most recent bond component created by the bond creator
-        //     let bond_components = self.zero_coupon_bond.get(&bond_creator_address).unwrap();
-        //     let latest_bond_component = bond_components.last().expect("No bond component found");
-
-        //     // Check bond maturity of the latest bond component
-        //     latest_bond_component.check_the_maturity_of_bonds()
-        // }
-
-        // New method to get bond details
-        // pub fn get_bond_details(&self, bond_creator_address: ComponentAddress) -> BondDetails {
-        //     assert!(
-        //         self.ann_token.contains_key(&bond_creator_address),
-        //         "No bonds created by the specified address."
-        //     );
-
-        //     // Retrieve the most recent bond component created by the bond creator
-        //     let bond_components = self.ann_token.get(&bond_creator_address).unwrap();
-        //     let latest_bond_component = bond_components.last().expect("No bond component found");
-
-        //     // Get bond details of the latest bond component
-        //     latest_bond_component.get_bond_details()
-        // }
-
         // Function to retrieve bond creators and their bond component addresses
         pub fn get_bond_creators(&self) -> HashMap<ComponentAddress, Vec<Global<Annuity>>> {
             self.ann_token.clone() // Return the HashMap of bond creators and their bonds
@@ -1052,23 +929,6 @@ mod radixdao {
         pub fn get_bond_creator_addresses(&self) -> Vec<ComponentAddress> {
             self.ann_token.keys().cloned().collect() // Return a list of bond creator addresses
         }
-
-        // Function to get bond creator address and bond details
-        // pub fn get_bond_creator_and_details(&self) -> Vec<(ComponentAddress, Vec<BondDetails>)> {
-        //     let mut result = Vec::new();
-
-        //     // Iterate through each bond creator address and their bond components
-        //     for (creator_address, bonds) in &self.ann_token {
-        //         let mut bond_details = Vec::new();
-        //         for bond in bonds {
-        //             bond_details.push(bond.get_bond_details());
-        //         }
-        //         // Push the creator address and corresponding bond details to the result
-        //         result.push((*creator_address, bond_details));
-        //     }
-
-        //     result
-        // }
 
         pub fn send_money_to_dao_treasury(
             &mut self,
@@ -1324,7 +1184,6 @@ mod radixdao {
             }
         }
 
-
         // pub fn claim_annual_payout(
         //     &mut self,
         //     ann_token_creator_address: ComponentAddress,
@@ -1346,39 +1205,208 @@ mod radixdao {
         //     }
         // }
 
-        pub fn claim_the_payout(&mut self, ann_token_creator_address: ComponentAddress) -> Result<(), String>{
+        pub fn claim_the_payout(
+            &mut self,
+            ann_token_creator_address: ComponentAddress,
+        ) -> Result<(), String> {
+            assert!(
+                self.ann_token.contains_key(&ann_token_creator_address),
+                "No insurance tokens are created by the specified address"
+            );
 
             if let Some(ann_token_components) = self.ann_token.get_mut(&ann_token_creator_address) {
-
                 let latest_ann_component = ann_token_components
                     .last_mut()
                     .ok_or_else(|| "No ANN token component found".to_string())?;
 
-                //make sure to have ANN token creation per address; removed 
+                //how much XRDs are required by the community as an annual payout?
+                //this is being taken care inside a function
 
+                //make sure to have ANN token creation per address; removed
                 // let payment = self.shares.take(target_xrd_amount);
 
                 //token resource_address
-                let r_a = latest_ann_component.get_annuity_address();
+                let ann_resource_address = latest_ann_component.get_annuity_address();
 
-                
-                let mut vault = self.ann_tokens.get_mut(&r_a).unwrap();
+                let mut vault = self.ann_tokens.get_mut(&ann_resource_address).unwrap();
 
                 let annuity_token_to_showcase = vault.take(1);
 
-                let (ann_token_in_return, payout) = latest_ann_component.claim_annual_payout(annuity_token_to_showcase);
+                let (ann_token_in_return, payout_or_collateral, liquidated, premature_claim) =
+                    latest_ann_component.claim_annual_payout(annuity_token_to_showcase);
 
                 // let mut vault_to_give_back_ann = self.ann_tokens.get_mut(&r_a).unwrap();
                 vault.put(ann_token_in_return);
 
-                self.shares.put(payout);
-
+                if liquidated == true {
+                    self.liquidated_collateral =
+                        Vault::new(payout_or_collateral.resource_address());
+                    self.liquidated_collateral.put(payout_or_collateral);
+                } else {
+                    if premature_claim == false {
+                        self.shares.put(payout_or_collateral);
+                    } else {
+                        println!("there is a empty bucket to add");
+                    }
+                }
                 Ok(())
             } else {
                 Err("No ANN Token created by the specified address.".to_string())
             }
         }
 
+        //FOR BOND ISSUER TO TAKE OUT COMMUNITY INVESTMENT
+        pub fn take_out_the_invested_XRDs_by_the_community(
+            &mut self,
+            ann_creator_address: ComponentAddress,
+        ) -> Bucket {
+            assert!(
+                self.ann_token.contains_key(&ann_creator_address),
+                "No bonds created by the specified address."
+            );
+
+            // Retrieve the most recent bond component created by the bond creator
+            let ann_components = self
+                .ann_token
+                .get_mut(&ann_creator_address)
+                .unwrap();
+
+            let latest_ann_component =
+            ann_components.last_mut().expect("No bond component found");
+
+            // let bond_creator_money_taken_status = latest_bond_component.bond_creator_money_status();
+
+            let taken_out_invested_amount =
+            latest_ann_component.take_out_the_invested_xrds_by_community();
+
+            let event_metadata = TakenOutInvestedXRD {
+                ann_creator_address,
+                taken_out_amount: taken_out_invested_amount.amount(),
+            };
+
+            Runtime::emit_event(PandaoEvent {
+                event_type: EventType::TAKEN_OUT_INVESTED_XRDS,
+                dao_type: DaoType::Investment,
+                component_address: Runtime::global_address(),
+                meta_data: DaoEvent::TakenOutInvestedXRD(event_metadata),
+            });
+
+            taken_out_invested_amount
+        }
+
+        // pub fn put_in_money_plus_interest_for_the_community_to_redeem(
+        //     &mut self,
+        //     ann_creator_address: ComponentAddress,
+        //     borrowed_xrd_with_interest: Bucket,
+        // ) -> (Bucket, Bucket) {
+        //     assert!(
+        //         self.ann_token.contains_key(&ann_creator_address),
+        //         "No ANN created by the specified address"
+        //     );
+
+        //     // Retrieve the most recent bond component created by the bond creator
+        //     let bond_components = self
+        //         .ann_token
+        //         .get_mut(&ann_creator_address)
+        //         .unwrap();
+
+        //     let latest_bond_component =
+        //         bond_components.last_mut().expect("No ANN component found");
+
+        //     let amount_getting_deposited = borrowed_xrd_with_interest.amount();
+
+        //     // Get Required Amount
+        //     let required_annual_amount = latest_bond_component.amount_to_pay();
+
+        //     let extra_money = latest_bond_component
+        //         .put_in_money_plus_interest_for_the_community_to_redeem(borrowed_xrd_with_interest);
+
+        //     let balance_of_ann_component =
+        //         latest_bond_component.check_the_balance_of_ann_issuer();
+
+        //     //required amount?balance_of_ann_component
+        //     let balance_required_by_community =
+        //         latest_bond_component.amount_to_pay();
+
+        //     //Jdo sara paisa with interest wapis ho gya odo baad appa collateral wapis krna hai
+
+        //     if balance_of_ann_component >= balance_required_by_community {
+        //         let collateral_being_taken_back = latest_bond_component.get_back_the_collateral();
+
+        //         let extra_money_amount = extra_money.amount();
+
+        //         // let required_now = latest_bond_component.balance_required_by_the_community();
+
+        //         let event_metadata_if = PutInMoneyPlusInterestEvent {
+        //             bond_creator_address,
+        //             amount_getting_deposited,
+        //             amount_required_by_the_community: required_amount,
+        //             amount_taken_by_the_community: required_amount,
+        //             extra_amount_given_back_to_the_sender: extra_money_amount,
+        //             more_xrd_amount_required_by_the_community: Decimal::zero(),
+        //             collateral_given_back: true,
+        //         };
+
+        //         Runtime::emit_event(PandaoEvent {
+        //             event_type: EventType::PUT_IN_MONEY_PLUS_INTEREST,
+        //             dao_type: DaoType::Investment,
+        //             component_address: Runtime::global_address(),
+        //             meta_data: DaoEvent::PutInMoneyPlusInterest(event_metadata_if),
+        //         });
+
+        //         (extra_money, collateral_being_taken_back)
+        //     } else {
+        //         let extra_money_amount = extra_money.amount();
+
+        //         //event emission
+
+        //         if amount_getting_deposited >= required_amount {
+        //             let event_metadata_if = PutInMoneyPlusInterestEvent {
+        //                 bond_creator_address,
+        //                 amount_getting_deposited,
+        //                 amount_required_by_the_community: required_amount,
+        //                 amount_taken_by_the_community: required_amount,
+        //                 extra_amount_given_back_to_the_sender: extra_money_amount,
+        //                 more_xrd_amount_required_by_the_community: Decimal::zero(),
+        //                 collateral_given_back: false,
+        //             };
+
+        //             Runtime::emit_event(PandaoEvent {
+        //                 event_type: EventType::PUT_IN_MONEY_PLUS_INTEREST,
+        //                 dao_type: DaoType::Investment,
+        //                 component_address: Runtime::global_address(),
+        //                 meta_data: DaoEvent::PutInMoneyPlusInterest(event_metadata_if),
+        //             });
+        //         } else {
+        //             let more_xrd_amount_required_by_the_community =
+        //                 required_amount - amount_getting_deposited;
+
+        //             let event_metadata_else = PutInMoneyPlusInterestEvent {
+        //                 bond_creator_address,
+        //                 amount_getting_deposited,
+        //                 amount_required_by_the_community: required_amount,
+        //                 amount_taken_by_the_community: amount_getting_deposited,
+        //                 extra_amount_given_back_to_the_sender: extra_money_amount,
+        //                 more_xrd_amount_required_by_the_community,
+        //                 collateral_given_back: false,
+        //             };
+
+        //             Runtime::emit_event(PandaoEvent {
+        //                 event_type: EventType::PUT_IN_LESS_MONEY_PLUS_INTEREST,
+        //                 dao_type: DaoType::Investment,
+        //                 component_address: Runtime::global_address(),
+        //                 meta_data: DaoEvent::PutInMoneyPlusInterest(event_metadata_else),
+        //             });
+        //         }
+
+        //         let collateral_resource_address =
+        //             latest_bond_component.get_resource_address_of_collateral();
+
+        //         let empty_bucket = Bucket::new(collateral_resource_address);
+
+        //         (extra_money, empty_bucket)
+        //     }
+        // }
     }
 }
 

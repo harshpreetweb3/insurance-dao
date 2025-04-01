@@ -1,5 +1,6 @@
 use scrypto::prelude::*;
 use crate::events::*;
+use chrono::{NaiveDateTime, Utc};
 
 #[derive(ScryptoSbor, Debug)]
 pub struct AnnuityDetails {
@@ -21,6 +22,8 @@ pub struct AnnuityDetails {
 
 #[blueprint]
 mod annuity {
+    use chrono::{Datelike, TimeZone};
+
 
     struct Annuity {
         contract_type: String,
@@ -35,9 +38,11 @@ mod annuity {
         annuities: Vault,
         collected_xrd: Vault,
         price: Decimal,
-        annual_payout: Decimal,
+        annual_payout: Decimal, //annual payout should be calculated autonomously? 
         last_payout_epoch: u64,
-        resource_address_of_anns : ResourceAddress
+        resource_address_of_anns : ResourceAddress,
+        nft_as_a_collateral : Vault,
+        collateral_resource_address : ResourceAddress
     }
 
     impl Annuity {
@@ -53,6 +58,7 @@ mod annuity {
             annuity_position: String,
             price: Decimal,
             number_of_annuities_to_mint: Decimal,
+            nft_as_a_collateral : Bucket
         ) -> Global<Annuity> {
             let bucket_of_annuities: Bucket = ResourceBuilder::new_fungible(OwnerRole::None)
                 .divisibility(DIVISIBILITY_NONE)
@@ -66,9 +72,14 @@ mod annuity {
                 .mint_initial_supply(number_of_annuities_to_mint)
                 .into();
 
-            let annual_payout = notional_principal / Decimal::from(5);
+            //detemine an year of maturity
+            let maturity_year = Self::determine_maturity_year(maturity_date);
+
+            let annual_payout = notional_principal / Decimal::from(maturity_year);
 
             let ra_ann = bucket_of_annuities.resource_address();
+
+            let collateral_resource_address = nft_as_a_collateral.resource_address();
 
             Self {
                 contract_type,
@@ -82,14 +93,34 @@ mod annuity {
                 annuity_position,
                 annuities: Vault::with_bucket(bucket_of_annuities),
                 collected_xrd: Vault::new(XRD),
-                price,
+                price,  
                 annual_payout,
                 last_payout_epoch: initial_exchange_date,
-                resource_address_of_anns : ra_ann
+                resource_address_of_anns : ra_ann,
+                nft_as_a_collateral : Vault::with_bucket(nft_as_a_collateral),
+                collateral_resource_address
             }
             .instantiate()
             .prepare_to_globalize(OwnerRole::None)
             .globalize()
+        }
+
+        pub fn determine_maturity_year(maturity_date : u64) -> i32 {
+            let maturity_naive_datetime = NaiveDateTime::from_timestamp_opt(maturity_date as i64, 0).expect("invalid timestamp");
+            let maturity_datetime = Utc.from_utc_datetime(&maturity_naive_datetime);
+            let maturity_year =  maturity_datetime.year();
+
+            // let current_date = Runtime::current_epoch().number();
+            let now: Instant = Clock::current_time_rounded_to_seconds();
+            let current_time_seconds: u64 = now.seconds_since_unix_epoch as u64;
+            
+            let current_naive_datetime = NaiveDateTime::from_timestamp_opt(current_time_seconds as i64, 0).expect("invalid timestamp");
+            let current_datetime = Utc.from_utc_datetime(&current_naive_datetime);
+            let current_year =  current_datetime.year();
+
+            println!("maturity_year {}", maturity_year-current_year);
+
+            maturity_year-current_year
         }
 
         pub fn get_annuity_address(&self)-> ResourceAddress{
@@ -113,7 +144,7 @@ mod annuity {
             
         }
 
-        pub fn claim_annual_payout(&mut self, annuity_token: Bucket) -> (Bucket, Bucket) {
+        pub fn claim_annual_payout(&mut self, annuity_token: Bucket) -> (Bucket, Bucket, bool, bool) {
             assert!(
                 annuity_token.amount() == Decimal::one(),
                 "You can only claim for one annuity (ANN) at a time."
@@ -143,35 +174,71 @@ mod annuity {
 
             if years_elapsed >= 1 {
 
-                let interest_payment =
-                    self.notional_principal * self.nominal_interest_rate / Decimal::from(500) ;
+                let interest_payment: Decimal =
+                    self.notional_principal * self.nominal_interest_rate / Decimal::from(100);
 
+                //this much payout should be made
                 let total_payout = self.annual_payout + interest_payment;
 
-                let payout = self.collected_xrd.take(total_payout);
+                //check if the contract has this much payout to give
+                let available_balance = self.collected_xrd.amount();
 
-                self.last_payout_epoch = current_time_seconds as u64;
+                if available_balance >= total_payout{
+                    //payment will be done
 
-                let remaining_time = seconds_in_year - (current_time_seconds - self.last_payout_epoch as i64);
+                    let payout = self.collected_xrd.take(total_payout);
+                    self.last_payout_epoch = current_time_seconds as u64;
+                    let remaining_time = seconds_in_year - (current_time_seconds - self.last_payout_epoch as i64);
+                    // let message = format!("You can have successfully claimed your annual payout");
+                    
+                    let event_metadata = ClaimAnnualPayout {
+                        // message,
+                        annual_payout_redeemed : true,
+                        payout_claimed_at : Some(current_time_seconds as u64),
+                        prev_payout_claimed_at : Some(prev_payout_claimed_at),
+                        remaining_time_to_next_payout : remaining_time
+                    };
+    
+                    Runtime::emit_event(PandaoEvent {
+                        event_type: EventType::ANNUAL_PAYOUT_CLAIMED,
+                        dao_type: DaoType::Insurance,
+                        component_address : Runtime::global_address(),
+                        meta_data: DaoEvent::ClaimAnnualPayout(event_metadata)
+                    });
 
-                let message = format!("You can have successfully claimed your annual payout");
+                    let liquidated = false;
+                    let premature_claim = false;
 
-                let event_metadata = ClaimAnnualPayout {
-                    message,
-                    annual_payout_redeemed : true,
-                    payout_claimed_at : Some(current_time_seconds as u64),
-                    prev_payout_claimed_at : Some(prev_payout_claimed_at),
-                    remaining_time_to_next_payout : remaining_time
-                };
+                    (annuity_token, payout, liquidated, premature_claim)
 
-                Runtime::emit_event(PandaoEvent {
-                    event_type: EventType::ANNUAL_PAYOUT_CLAIMED,
-                    dao_type: DaoType::Insurance,
-                    component_address : Runtime::global_address(),
-                    meta_data: DaoEvent::ClaimAnnualPayout(event_metadata)
-                });
+                }
+                else{
+                    //perform liquidation
 
-                (annuity_token, payout)
+                    let redeemed_collateral = self.liquidate_collateral();
+
+                    let collateral_resource_address = self.collateral_resource_address;
+                    let collateral_amount = redeemed_collateral.amount();
+
+                    let liquidated = true;
+                    let premature_claim = false;
+
+                    let event_metadata = LiquidatedCollateral {  
+                        collateral_resource_address,
+                        collateral_amount,
+                        liquidated_at : Some(current_time_seconds as u64),
+                        prev_payout_claimed_at : Some(prev_payout_claimed_at)
+                    };
+
+                    Runtime::emit_event(PandaoEvent {
+                        event_type: EventType::COLLATERAL_LIQUIDATED,
+                        dao_type: DaoType::Insurance,
+                        component_address : Runtime::global_address(),
+                        meta_data: DaoEvent::CollateralLiquidated(event_metadata)
+                    });
+                    
+                    (annuity_token, redeemed_collateral, liquidated, premature_claim)
+                }                
 
             } else {
 
@@ -179,10 +246,10 @@ mod annuity {
                 
                 let remaining_time = seconds_in_year - (current_time_seconds - self.last_payout_epoch as i64);
 
-                let message = format!("You can claim your annual payout after {} seconds.", remaining_time);
+                // let message = format!("You can claim your annual payout after {} seconds.", remaining_time);
 
                 let event_metadata = ClaimAnnualPayout {
-                    message,
+                    // message,
                     annual_payout_redeemed : false,
                     payout_claimed_at : Some(prev_payout_claimed_at),
                     prev_payout_claimed_at : Some(prev_payout_claimed_at),
@@ -196,8 +263,70 @@ mod annuity {
                     meta_data: DaoEvent::ClaimAnnualPayout(event_metadata)
                 });
 
-                (annuity_token, empty_bucket)
+                let liquidated= false;
+                let premature_claim = true;
+
+                (annuity_token, empty_bucket, liquidated, premature_claim)
             }
+        }
+
+        pub fn liquidate_collateral(&mut self) -> Bucket{
+
+            // AFTER MATURITY DATE
+            let now: Instant = Clock::current_time_rounded_to_seconds();
+            let current_time_seconds: u64 = now.seconds_since_unix_epoch as u64;
+
+            //CHECK IF MATURITY DATE PASSED
+            assert!(self.maturity_date < current_time_seconds, "you cannot redeem the collateral because maturity date is not passed yet");
+
+            self.nft_as_a_collateral.take(1)
+        }
+
+        pub fn take_out_the_invested_xrds_by_community(&mut self) -> Bucket{
+            let ann_price = *&self.price;
+            self.collected_xrd.take(ann_price)
+        }
+
+        pub fn amount_to_pay(&self) -> Decimal {
+            let maturity_years =  Self::determine_maturity_year(self.maturity_date);
+            let interest_payment = self.notional_principal * self.nominal_interest_rate  / Decimal::from(maturity_years * 100);
+
+            let total_payout = self.annual_payout + interest_payment;
+
+            total_payout
+        }
+
+        pub fn put_in_money_plus_interest_for_the_community_to_redeem(&mut self, mut borrowed_xrd_with_interest : Bucket) -> Bucket {
+
+            let required_annual_amount_by_the_community = self.amount_to_pay();
+
+            let resource_address_of_xrds = borrowed_xrd_with_interest.resource_address();
+
+            let amount_getting_deposited = borrowed_xrd_with_interest.amount();
+
+            if amount_getting_deposited >= required_annual_amount_by_the_community{
+
+                let taken_out_required_amount = borrowed_xrd_with_interest.take(required_annual_amount_by_the_community);
+
+                self.collected_xrd.put(taken_out_required_amount);
+
+                borrowed_xrd_with_interest
+
+            }else{
+
+                self.collected_xrd.put(borrowed_xrd_with_interest);
+
+                // this is an emtpy bucket 
+                Bucket::new(resource_address_of_xrds)
+            }
+
+        }
+
+        pub fn check_the_balance_of_ann_issuer(&self) 
+        -> Decimal
+        {
+            let balance = self.collected_xrd.amount();
+            balance
         }
     }
 }
