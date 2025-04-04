@@ -1205,9 +1205,10 @@ mod radixdao {
         //     }
         // }
 
+        
         pub fn claim_the_payout(
             &mut self,
-            ann_token_creator_address: ComponentAddress,
+            ann_token_creator_address: ComponentAddress
         ) -> Result<(), String> {
             assert!(
                 self.ann_token.contains_key(&ann_token_creator_address),
@@ -1223,12 +1224,12 @@ mod radixdao {
                 //this is being taken care inside a function
 
                 //make sure to have ANN token creation per address; removed
-                // let payment = self.shares.take(target_xrd_amount);
+                //let payment = self.shares.take(target_xrd_amount);
 
                 //token resource_address
                 let ann_resource_address = latest_ann_component.get_annuity_address();
 
-                let mut vault = self.ann_tokens.get_mut(&ann_resource_address).unwrap();
+                let mut vault = self.ann_tokens.get_mut(&ann_resource_address).unwrap(); //was mutable earlier
 
                 let annuity_token_to_showcase = vault.take(1);
 
@@ -1266,18 +1267,14 @@ mod radixdao {
             );
 
             // Retrieve the most recent bond component created by the bond creator
-            let ann_components = self
-                .ann_token
-                .get_mut(&ann_creator_address)
-                .unwrap();
+            let ann_components = self.ann_token.get_mut(&ann_creator_address).unwrap();
 
-            let latest_ann_component =
-            ann_components.last_mut().expect("No bond component found");
+            let latest_ann_component = ann_components.last_mut().expect("No bond component found");
 
             // let bond_creator_money_taken_status = latest_bond_component.bond_creator_money_status();
 
             let taken_out_invested_amount =
-            latest_ann_component.take_out_the_invested_xrds_by_community();
+                latest_ann_component.take_out_the_invested_xrds_by_community();
 
             let event_metadata = TakenOutInvestedXRD {
                 ann_creator_address,
@@ -1294,119 +1291,191 @@ mod radixdao {
             taken_out_invested_amount
         }
 
-        // pub fn put_in_money_plus_interest_for_the_community_to_redeem(
-        //     &mut self,
-        //     ann_creator_address: ComponentAddress,
-        //     borrowed_xrd_with_interest: Bucket,
-        // ) -> (Bucket, Bucket) {
-        //     assert!(
-        //         self.ann_token.contains_key(&ann_creator_address),
-        //         "No ANN created by the specified address"
-        //     );
+        pub fn put_in_money_plus_interest_for_the_community_to_redeem(
+            &mut self,
+            ann_creator_address: ComponentAddress,
+            borrowed_xrd_with_interest: Bucket,
+        ) -> (Bucket, Bucket) {
+            assert!(
+                self.ann_token.contains_key(&ann_creator_address),
+                "No ANN created by the specified address"
+            );
 
-        //     // Retrieve the most recent bond component created by the bond creator
-        //     let bond_components = self
-        //         .ann_token
-        //         .get_mut(&ann_creator_address)
-        //         .unwrap();
+            // Retrieve the most recent bond component created by the bond creator
+            let bond_components = self.ann_token.get_mut(&ann_creator_address).unwrap();
 
-        //     let latest_bond_component =
-        //         bond_components.last_mut().expect("No ANN component found");
+            let latest_bond_component = bond_components.last_mut().expect("No ANN component found");
 
-        //     let amount_getting_deposited = borrowed_xrd_with_interest.amount();
+            let amount_getting_deposited = borrowed_xrd_with_interest.amount();
 
-        //     // Get Required Amount
-        //     let required_annual_amount = latest_bond_component.amount_to_pay();
+            //GET REQUIRED AMOUNT
+            //CASE 1: DEPOSIT CAN BE NOTIONAL_PRINCIPAL + INTEREST
+            let required_total_amount = latest_bond_component.total_amount_to_payback();
+            //CASE 2: DEPOSIT CAN BE ANNUAL + ANNUAL_INTEREST
+            let required_annual_amount = latest_bond_component.annual_amount_to_payback();
 
-        //     let extra_money = latest_bond_component
-        //         .put_in_money_plus_interest_for_the_community_to_redeem(borrowed_xrd_with_interest);
+            let extra_money_if_any = latest_bond_component
+                .put_in_money_plus_interest_for_the_community_to_redeem(borrowed_xrd_with_interest);
 
-        //     let balance_of_ann_component =
-        //         latest_bond_component.check_the_balance_of_ann_issuer();
+            let balance_of_ann_component =
+                latest_bond_component.check_the_balance_of_ann_contract();
 
-        //     //required amount?balance_of_ann_component
-        //     let balance_required_by_community =
-        //         latest_bond_component.amount_to_pay();
+            //Jdo sara paisa with interest wapis ho gya odo baad appa collateral wapis krna hai
 
-        //     //Jdo sara paisa with interest wapis ho gya odo baad appa collateral wapis krna hai
+            let remaining_amount_to_be_deposited =
+                latest_bond_component.remaining_amount_to_be_deposited();
 
-        //     if balance_of_ann_component >= balance_required_by_community {
-        //         let collateral_being_taken_back = latest_bond_component.get_back_the_collateral();
+            if balance_of_ann_component >= required_total_amount {
+                //GIVE BACK THE COLLATERAL
+                let collateral_being_taken_back = latest_bond_component.get_back_the_collateral();
+                // let extra_money_amount = extra_money_if_any.amount();
 
-        //         let extra_money_amount = extra_money.amount();
+                let event_metadata = PutInMoneyPlusInterestEvent {
+                    ann_creator_address,
+                    amount_getting_deposited,
+                    yearly_amount_required_by_the_community: required_annual_amount,
+                    total_amount_required_by_the_community: required_total_amount,
+                    amount_sent_for_a_community_to_redeem: amount_getting_deposited,
+                    extra_amount_given_back_to_the_sender: extra_money_if_any.amount(),
+                    more_xrd_amount_required_by_the_community: remaining_amount_to_be_deposited,
+                    collateral_given_back: true,
+                };
 
-        //         // let required_now = latest_bond_component.balance_required_by_the_community();
+                Runtime::emit_event(PandaoEvent {
+                    event_type: EventType::PUT_IN_MONEY_PLUS_INTEREST,
+                    dao_type: DaoType::Insurance,
+                    component_address: Runtime::global_address(),
+                    meta_data: DaoEvent::PutInMoneyPlusInterest(event_metadata),
+                });
+                
+                return (extra_money_if_any, collateral_being_taken_back);
+            } else if balance_of_ann_component >= required_annual_amount {
+                //DO NOT GIVE BACK THE COLLATERAL
+                //DO NOT GIVE BACK EXTRA AMOUNT (managed from ANN contract)
+                let empty_collateral = Bucket::new(XRD);
 
-        //         let event_metadata_if = PutInMoneyPlusInterestEvent {
-        //             bond_creator_address,
-        //             amount_getting_deposited,
-        //             amount_required_by_the_community: required_amount,
-        //             amount_taken_by_the_community: required_amount,
-        //             extra_amount_given_back_to_the_sender: extra_money_amount,
-        //             more_xrd_amount_required_by_the_community: Decimal::zero(),
-        //             collateral_given_back: true,
-        //         };
+                let event_metadata = PutInMoneyPlusInterestEvent {
+                    ann_creator_address,
+                    amount_getting_deposited,
+                    yearly_amount_required_by_the_community: required_annual_amount,
+                    total_amount_required_by_the_community: required_total_amount,
+                    amount_sent_for_a_community_to_redeem: amount_getting_deposited,
+                    extra_amount_given_back_to_the_sender: extra_money_if_any.amount(),
+                    more_xrd_amount_required_by_the_community: remaining_amount_to_be_deposited,
+                    collateral_given_back: false,
+                };
 
-        //         Runtime::emit_event(PandaoEvent {
-        //             event_type: EventType::PUT_IN_MONEY_PLUS_INTEREST,
-        //             dao_type: DaoType::Investment,
-        //             component_address: Runtime::global_address(),
-        //             meta_data: DaoEvent::PutInMoneyPlusInterest(event_metadata_if),
-        //         });
+                Runtime::emit_event(PandaoEvent {
+                    event_type: EventType::PUT_IN_MONEY_PLUS_INTEREST,
+                    dao_type: DaoType::Insurance,
+                    component_address: Runtime::global_address(),
+                    meta_data: DaoEvent::PutInMoneyPlusInterest(event_metadata),
+                });
 
-        //         (extra_money, collateral_being_taken_back)
-        //     } else {
-        //         let extra_money_amount = extra_money.amount();
+                return (extra_money_if_any, empty_collateral); //empty_buckets returned
+            } else {
+                let empty_collateral = Bucket::new(XRD);
 
-        //         //event emission
+                let event_metadata = PutInMoneyPlusInterestEvent {
+                    ann_creator_address,
+                    amount_getting_deposited,
+                    yearly_amount_required_by_the_community: required_annual_amount,
+                    total_amount_required_by_the_community: required_total_amount,
+                    amount_sent_for_a_community_to_redeem: amount_getting_deposited,
+                    extra_amount_given_back_to_the_sender: extra_money_if_any.amount(),
+                    more_xrd_amount_required_by_the_community: remaining_amount_to_be_deposited,
+                    collateral_given_back: false,
+                };
 
-        //         if amount_getting_deposited >= required_amount {
-        //             let event_metadata_if = PutInMoneyPlusInterestEvent {
-        //                 bond_creator_address,
-        //                 amount_getting_deposited,
-        //                 amount_required_by_the_community: required_amount,
-        //                 amount_taken_by_the_community: required_amount,
-        //                 extra_amount_given_back_to_the_sender: extra_money_amount,
-        //                 more_xrd_amount_required_by_the_community: Decimal::zero(),
-        //                 collateral_given_back: false,
-        //             };
+                Runtime::emit_event(PandaoEvent {
+                    event_type: EventType::PUT_IN_MONEY_PLUS_INTEREST,
+                    dao_type: DaoType::Insurance,
+                    component_address: Runtime::global_address(),
+                    meta_data: DaoEvent::PutInMoneyPlusInterest(event_metadata),
+                });
+                
+                return (extra_money_if_any, empty_collateral); //empty_buckets returned
+            }
 
-        //             Runtime::emit_event(PandaoEvent {
-        //                 event_type: EventType::PUT_IN_MONEY_PLUS_INTEREST,
-        //                 dao_type: DaoType::Investment,
-        //                 component_address: Runtime::global_address(),
-        //                 meta_data: DaoEvent::PutInMoneyPlusInterest(event_metadata_if),
-        //             });
-        //         } else {
-        //             let more_xrd_amount_required_by_the_community =
-        //                 required_amount - amount_getting_deposited;
+            // if balance_of_ann_component >= required_annual_amount {
+            //     //DO NOT GIVE BACK THE COLLATERAL
+            //     //DO NOT GIVE BACK EXTRA AMOUNT
+            //     let collateral_being_taken_back = latest_bond_component.get_back_the_collateral();
 
-        //             let event_metadata_else = PutInMoneyPlusInterestEvent {
-        //                 bond_creator_address,
-        //                 amount_getting_deposited,
-        //                 amount_required_by_the_community: required_amount,
-        //                 amount_taken_by_the_community: amount_getting_deposited,
-        //                 extra_amount_given_back_to_the_sender: extra_money_amount,
-        //                 more_xrd_amount_required_by_the_community,
-        //                 collateral_given_back: false,
-        //             };
+            //     let extra_money_amount = extra_money_if_any.amount();
 
-        //             Runtime::emit_event(PandaoEvent {
-        //                 event_type: EventType::PUT_IN_LESS_MONEY_PLUS_INTEREST,
-        //                 dao_type: DaoType::Investment,
-        //                 component_address: Runtime::global_address(),
-        //                 meta_data: DaoEvent::PutInMoneyPlusInterest(event_metadata_else),
-        //             });
-        //         }
+            //     // let required_now = latest_bond_component.balance_required_by_the_community();
 
-        //         let collateral_resource_address =
-        //             latest_bond_component.get_resource_address_of_collateral();
+            //     let event_metadata_if = PutInMoneyPlusInterestEvent {
+            //         bond_creator_address,
+            //         amount_getting_deposited,
+            //         amount_required_by_the_community: required_amount,
+            //         amount_taken_by_the_community: required_amount,
+            //         extra_amount_given_back_to_the_sender: extra_money_amount,
+            //         more_xrd_amount_required_by_the_community: Decimal::zero(),
+            //         collateral_given_back: true,
+            //     };
 
-        //         let empty_bucket = Bucket::new(collateral_resource_address);
+            //     Runtime::emit_event(PandaoEvent {
+            //         event_type: EventType::PUT_IN_MONEY_PLUS_INTEREST,
+            //         dao_type: DaoType::Investment,
+            //         component_address: Runtime::global_address(),
+            //         meta_data: DaoEvent::PutInMoneyPlusInterest(event_metadata_if),
+            //     });
 
-        //         (extra_money, empty_bucket)
-        //     }
-        // }
+            //     (extra_money_if_any, collateral_being_taken_back)
+            // } else {
+            //     let extra_money_amount = extra_money.amount();
+
+            //     //event emission
+
+            //     if amount_getting_deposited >= required_amount {
+            //         let event_metadata_if = PutInMoneyPlusInterestEvent {
+            //             bond_creator_address,
+            //             amount_getting_deposited,
+            //             amount_required_by_the_community: required_amount,
+            //             amount_taken_by_the_community: required_amount,
+            //             extra_amount_given_back_to_the_sender: extra_money_amount,
+            //             more_xrd_amount_required_by_the_community: Decimal::zero(),
+            //             collateral_given_back: false,
+            //         };
+
+            //         Runtime::emit_event(PandaoEvent {
+            //             event_type: EventType::PUT_IN_MONEY_PLUS_INTEREST,
+            //             dao_type: DaoType::Investment,
+            //             component_address: Runtime::global_address(),
+            //             meta_data: DaoEvent::PutInMoneyPlusInterest(event_metadata_if),
+            //         });
+            //     } else {
+            //         let more_xrd_amount_required_by_the_community =
+            //             required_amount - amount_getting_deposited;
+
+            //         let event_metadata_else = PutInMoneyPlusInterestEvent {
+            //             bond_creator_address,
+            //             amount_getting_deposited,
+            //             amount_required_by_the_community: required_amount,
+            //             amount_taken_by_the_community: amount_getting_deposited,
+            //             extra_amount_given_back_to_the_sender: extra_money_amount,
+            //             more_xrd_amount_required_by_the_community,
+            //             collateral_given_back: false,
+            //         };
+
+            //         Runtime::emit_event(PandaoEvent {
+            //             event_type: EventType::PUT_IN_LESS_MONEY_PLUS_INTEREST,
+            //             dao_type: DaoType::Investment,
+            //             component_address: Runtime::global_address(),
+            //             meta_data: DaoEvent::PutInMoneyPlusInterest(event_metadata_else),
+            //         });
+            //     }
+
+            //     let collateral_resource_address =
+            //         latest_bond_component.get_resource_address_of_collateral();
+
+            //     let empty_bucket = Bucket::new(collateral_resource_address);
+
+            //     (extra_money, empty_bucket)
+            // }
+        }
     }
 }
 

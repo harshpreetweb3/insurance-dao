@@ -31,7 +31,9 @@ pub enum EventType {
 
     ANNUAL_PAYOUT_COULD_NOT_BE_CLAIMED,
 
-    TAKEN_OUT_INVESTED_XRDS
+    TAKEN_OUT_INVESTED_XRDS,
+
+    PUT_IN_MONEY_PLUS_INTEREST
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
@@ -121,14 +123,12 @@ pub enum DaoEvent {
     ProposalQuorumNotMet(ProposalQuorumNotMet), // New event type
 
     ProposalQuorumMet(ProposalQuorumMet), // ProposalCreationRightEveryone,
-
                                           // ProposalCreationRightTokenHolderThreshold(Decimal),
-
                                           // ProposalCreationRightAdmin
-
     ClaimAnnualPayout(ClaimAnnualPayout),
     CollateralLiquidated(LiquidatedCollateral),
-    TakenOutInvestedXRD(TakenOutInvestedXRD)
+    TakenOutInvestedXRD(TakenOutInvestedXRD),
+    PutInMoneyPlusInterest(PutInMoneyPlusInterestEvent)
 }
 
 // #[derive(ScryptoSbor, ScryptoEvent)]
@@ -282,4 +282,16 @@ pub struct LiquidatedCollateral {
 pub struct TakenOutInvestedXRD {
     pub ann_creator_address : ComponentAddress,
     pub taken_out_amount : Decimal
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct PutInMoneyPlusInterestEvent {
+    pub ann_creator_address: ComponentAddress,
+    pub amount_getting_deposited : Decimal,
+    pub yearly_amount_required_by_the_community : Decimal,
+    pub total_amount_required_by_the_community : Decimal,
+    pub amount_sent_for_a_community_to_redeem : Decimal,
+    pub extra_amount_given_back_to_the_sender : Decimal,
+    pub more_xrd_amount_required_by_the_community : Decimal,
+    pub collateral_given_back : bool
 }

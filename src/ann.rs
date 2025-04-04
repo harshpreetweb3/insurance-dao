@@ -42,7 +42,8 @@ mod annuity {
         last_payout_epoch: u64,
         resource_address_of_anns : ResourceAddress,
         nft_as_a_collateral : Vault,
-        collateral_resource_address : ResourceAddress
+        collateral_resource_address : ResourceAddress,
+        total_amount_deposited : Decimal
     }
 
     impl Annuity {
@@ -98,7 +99,8 @@ mod annuity {
                 last_payout_epoch: initial_exchange_date,
                 resource_address_of_anns : ra_ann,
                 nft_as_a_collateral : Vault::with_bucket(nft_as_a_collateral),
-                collateral_resource_address
+                collateral_resource_address,
+                total_amount_deposited : Decimal::from(0)
             }
             .instantiate()
             .prepare_to_globalize(OwnerRole::None)
@@ -287,46 +289,57 @@ mod annuity {
             self.collected_xrd.take(ann_price)
         }
 
-        pub fn amount_to_pay(&self) -> Decimal {
-            let maturity_years =  Self::determine_maturity_year(self.maturity_date);
-            let interest_payment = self.notional_principal * self.nominal_interest_rate  / Decimal::from(maturity_years * 100);
+        pub fn annual_amount_to_payback(&self) -> Decimal {
+            let maturity_years =  Self::determine_maturity_year(self.maturity_date); //being tested by Abdu
+            let annual_interest_payment = self.notional_principal * self.nominal_interest_rate  / Decimal::from(maturity_years * 100);
+            let annual_payout = self.annual_payout + annual_interest_payment;
+            annual_payout
+        }
 
-            let total_payout = self.annual_payout + interest_payment;
-
-            total_payout
+        pub fn total_amount_to_payback(&self) -> Decimal{
+            let total_interest = self.notional_principal * self.nominal_interest_rate / Decimal::from(100);
+            let total_amount = self.notional_principal;
+            total_amount + total_interest
         }
 
         pub fn put_in_money_plus_interest_for_the_community_to_redeem(&mut self, mut borrowed_xrd_with_interest : Bucket) -> Bucket {
-
-            let required_annual_amount_by_the_community = self.amount_to_pay();
-
+            let required_annual_amount_by_the_community = self.annual_amount_to_payback();
             let resource_address_of_xrds = borrowed_xrd_with_interest.resource_address();
-
             let amount_getting_deposited = borrowed_xrd_with_interest.amount();
-
             if amount_getting_deposited >= required_annual_amount_by_the_community{
-
-                let taken_out_required_amount = borrowed_xrd_with_interest.take(required_annual_amount_by_the_community);
-
-                self.collected_xrd.put(taken_out_required_amount);
-
+                if amount_getting_deposited > self.total_amount_to_payback(){
+                    let taken_out_required_amount = borrowed_xrd_with_interest.take(self.total_amount_to_payback());
+                    self.collected_xrd.put(taken_out_required_amount);
+                    self.total_amount_deposited += self.total_amount_to_payback();
+                }else{
+                    let taken_out_required_amount = borrowed_xrd_with_interest.take(amount_getting_deposited);
+                    self.collected_xrd.put(taken_out_required_amount);
+                    self.total_amount_deposited += amount_getting_deposited;
+                }
                 borrowed_xrd_with_interest
-
             }else{
-
-                self.collected_xrd.put(borrowed_xrd_with_interest);
-
-                // this is an emtpy bucket 
-                Bucket::new(resource_address_of_xrds)
+                self.collected_xrd.put(borrowed_xrd_with_interest); 
+                self.total_amount_deposited += amount_getting_deposited;
+                Bucket::new(resource_address_of_xrds) // this is an emtpy bucket
             }
-
         }
 
-        pub fn check_the_balance_of_ann_issuer(&self) 
-        -> Decimal
-        {
+        pub fn check_the_balance_of_ann_contract(&self) -> Decimal{
             let balance = self.collected_xrd.amount();
             balance
+        }
+
+        pub fn total_amount_deposited(&self) -> Decimal{
+            self.total_amount_deposited
+        }
+
+        pub fn get_back_the_collateral(&mut self) -> Bucket{
+            self.nft_as_a_collateral.take(1)
+        }
+
+        pub fn remaining_amount_to_be_deposited(&self) -> Decimal{
+            let amount_deposited = self.total_amount_deposited;
+            self.total_amount_to_payback() - amount_deposited
         }
     }
 }
