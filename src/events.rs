@@ -275,6 +275,7 @@ pub struct LiquidatedCollateral {
     pub collateral_amount : Decimal,
     pub liquidated_at : Option<u64>,
     pub prev_payout_claimed_at : Option<u64>,
+    pub collateral_liquidated : bool
     // pub remaining_time_to_next_payout : i64
 }
 

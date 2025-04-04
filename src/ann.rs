@@ -229,7 +229,8 @@ mod annuity {
                         collateral_resource_address,
                         collateral_amount,
                         liquidated_at : Some(current_time_seconds as u64),
-                        prev_payout_claimed_at : Some(prev_payout_claimed_at)
+                        prev_payout_claimed_at : Some(prev_payout_claimed_at),
+                        collateral_liquidated : true
                     };
 
                     Runtime::emit_event(PandaoEvent {
