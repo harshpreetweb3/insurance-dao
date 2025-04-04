@@ -1,6 +1,6 @@
 use scrypto::prelude::*;
 use crate::events::*;
-// use chrono::{NaiveDateTime, Utc}; // Removed chrono import
+// use chrono::{NaiveDateTime, Utc}; // Removed chrono import // Changes here
 
 #[derive(ScryptoSbor, Debug)]
 pub struct AnnuityDetails {
@@ -22,7 +22,7 @@ pub struct AnnuityDetails {
 
 #[blueprint]
 mod annuity {
-    // use chrono::{Datelike, TimeZone}; // Removed chrono import
+    // use chrono::{Datelike, TimeZone}; // Removed chrono import // Changes here
 
     struct Annuity {
         contract_type: String,
@@ -114,7 +114,7 @@ mod annuity {
             let maturity_year = 1970 + (maturity_date / seconds_in_year);
             let current_year = 1970 + (current_time_seconds / seconds_in_year);
 
-            (maturity_year as i32) - (current_year as i32)
+            (maturity_year as i32) - (current_year as i32) // Changes here
         }
 
         pub fn get_annuity_address(&self)-> ResourceAddress{
