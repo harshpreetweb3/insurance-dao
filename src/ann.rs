@@ -1,6 +1,6 @@
 use scrypto::prelude::*;
 use crate::events::*;
-use chrono::{NaiveDateTime, Utc};
+// use chrono::{NaiveDateTime, Utc}; // Removed chrono import
 
 #[derive(ScryptoSbor, Debug)]
 pub struct AnnuityDetails {
@@ -22,8 +22,7 @@ pub struct AnnuityDetails {
 
 #[blueprint]
 mod annuity {
-    use chrono::{Datelike, TimeZone};
-
+    // use chrono::{Datelike, TimeZone}; // Removed chrono import
 
     struct Annuity {
         contract_type: String,
@@ -38,7 +37,7 @@ mod annuity {
         annuities: Vault,
         collected_xrd: Vault,
         price: Decimal,
-        annual_payout: Decimal, //annual payout should be calculated autonomously? 
+        annual_payout: Decimal, //annual payout should be calculated autonomously?
         last_payout_epoch: u64,
         resource_address_of_anns : ResourceAddress,
         nft_as_a_collateral : Vault,
@@ -94,7 +93,7 @@ mod annuity {
                 annuity_position,
                 annuities: Vault::with_bucket(bucket_of_annuities),
                 collected_xrd: Vault::new(XRD),
-                price,  
+                price,
                 annual_payout,
                 last_payout_epoch: initial_exchange_date,
                 resource_address_of_anns : ra_ann,
@@ -108,21 +107,14 @@ mod annuity {
         }
 
         pub fn determine_maturity_year(maturity_date : u64) -> i32 {
-            let maturity_naive_datetime = NaiveDateTime::from_timestamp_opt(maturity_date as i64, 0).expect("invalid timestamp");
-            let maturity_datetime = Utc.from_utc_datetime(&maturity_naive_datetime);
-            let maturity_year =  maturity_datetime.year();
-
-            // let current_date = Runtime::current_epoch().number();
             let now: Instant = Clock::current_time_rounded_to_seconds();
             let current_time_seconds: u64 = now.seconds_since_unix_epoch as u64;
-            
-            let current_naive_datetime = NaiveDateTime::from_timestamp_opt(current_time_seconds as i64, 0).expect("invalid timestamp");
-            let current_datetime = Utc.from_utc_datetime(&current_naive_datetime);
-            let current_year =  current_datetime.year();
+            let seconds_in_year: u64 = 365 * 24 * 60 * 60;
 
-            println!("maturity_year {}", maturity_year-current_year);
+            let maturity_year = 1970 + (maturity_date / seconds_in_year);
+            let current_year = 1970 + (current_time_seconds / seconds_in_year);
 
-            maturity_year-current_year
+            (maturity_year as i32) - (current_year as i32)
         }
 
         pub fn get_annuity_address(&self)-> ResourceAddress{
@@ -141,9 +133,6 @@ mod annuity {
             let seconds_in_year = 365 * 24 * 60 * 60;
             let time_left = self.last_payout_epoch + seconds_in_year - current_epoch;
             time_left as i64
-
-            
-            
         }
 
         pub fn claim_annual_payout(&mut self, annuity_token: Bucket) -> (Bucket, Bucket, bool, bool) {
@@ -157,13 +146,8 @@ mod annuity {
                 "Invalid annuity resource."
             );
 
-            // let current_epoch =
-            //     Clock::current_time_rounded_to_seconds().seconds_since_unix_epoch as u64;
-
             let now = Clock::current_time_rounded_to_seconds();
             let current_time_seconds = now.seconds_since_unix_epoch;
-
-            //notice it gives out timestamp in integer which contains non-fractional values
 
             let seconds_in_year = 365 * 24 * 60 * 60;
             //31536000
@@ -192,7 +176,7 @@ mod annuity {
                     self.last_payout_epoch = current_time_seconds as u64;
                     let remaining_time = seconds_in_year - (current_time_seconds - self.last_payout_epoch as i64);
                     // let message = format!("You can have successfully claimed your annual payout");
-                    
+
                     let event_metadata = ClaimAnnualPayout {
                         // message,
                         annual_payout_redeemed : true,
@@ -200,7 +184,7 @@ mod annuity {
                         prev_payout_claimed_at : Some(prev_payout_claimed_at),
                         remaining_time_to_next_payout : remaining_time
                     };
-    
+
                     Runtime::emit_event(PandaoEvent {
                         event_type: EventType::ANNUAL_PAYOUT_CLAIMED,
                         dao_type: DaoType::Insurance,
@@ -225,7 +209,7 @@ mod annuity {
                     let liquidated = true;
                     let premature_claim = false;
 
-                    let event_metadata = LiquidatedCollateral {  
+                    let event_metadata = LiquidatedCollateral {
                         collateral_resource_address,
                         collateral_amount,
                         liquidated_at : Some(current_time_seconds as u64),
@@ -239,14 +223,14 @@ mod annuity {
                         component_address : Runtime::global_address(),
                         meta_data: DaoEvent::CollateralLiquidated(event_metadata)
                     });
-                    
+
                     (annuity_token, redeemed_collateral, liquidated, premature_claim)
-                }                
+                }
 
             } else {
 
                 let empty_bucket = self.collected_xrd.take(0);
-                
+
                 let remaining_time = seconds_in_year - (current_time_seconds - self.last_payout_epoch as i64);
 
                 // let message = format!("You can claim your annual payout after {} seconds.", remaining_time);
@@ -319,7 +303,7 @@ mod annuity {
                 }
                 borrowed_xrd_with_interest
             }else{
-                self.collected_xrd.put(borrowed_xrd_with_interest); 
+                self.collected_xrd.put(borrowed_xrd_with_interest);
                 self.total_amount_deposited += amount_getting_deposited;
                 Bucket::new(resource_address_of_xrds) // this is an emtpy bucket
             }

@@ -1,0 +1,30 @@
+CALL_FUNCTION
+Address("package_tdx_2_1pkjyyetamgpxsk4yfty69cpvn806uk7kzyyg2pjph5ge44hjqj9xmn")
+"TokenWeigtedDao"
+"initiate"
+"The ANN community"
+100i32
+0u8
+Decimal("2")
+Decimal("1")
+"https://picsum.photos/200/300"
+"https://picsum.photos/200/300"
+"None"
+Array<String>(
+"a" ,
+"b" ,
+"c" ,
+"d" ,
+"e"
+)
+"Test"
+Enum<0u8>( )
+"ATest"
+;
+
+CALL_METHOD
+    Address("account_tdx_2_129rm89k7uuqta4e8catha9cfy93mfsedl4l0ktgy72xn74dqnu69y9")
+    "try_deposit_batch_or_refund"
+    Expression("ENTIRE_WORKTOP")
+    Enum<0u8>()
+;
