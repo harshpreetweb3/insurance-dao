@@ -1206,55 +1206,55 @@ mod radixdao {
         // }
 
         
-        pub fn claim_the_payout(
-            &mut self,
-            ann_token_creator_address: ComponentAddress
-        ) -> Result<(), String> {
-            assert!(
-                self.ann_token.contains_key(&ann_token_creator_address),
-                "No insurance tokens are created by the specified address"
-            );
+        // pub fn claim_the_payout(
+        //     &mut self,
+        //     ann_token_creator_address: ComponentAddress
+        // ) -> Result<(), String> {
+        //     assert!(
+        //         self.ann_token.contains_key(&ann_token_creator_address),
+        //         "No insurance tokens are created by the specified address"
+        //     );
 
-            if let Some(ann_token_components) = self.ann_token.get_mut(&ann_token_creator_address) {
-                let latest_ann_component = ann_token_components
-                    .last_mut()
-                    .ok_or_else(|| "No ANN token component found".to_string())?;
+        //     if let Some(ann_token_components) = self.ann_token.get_mut(&ann_token_creator_address) {
+        //         let latest_ann_component = ann_token_components
+        //             .last_mut()
+        //             .ok_or_else(|| "No ANN token component found".to_string())?;
 
-                //how much XRDs are required by the community as an annual payout?
-                //this is being taken care inside a function
+        //         //how much XRDs are required by the community as an annual payout?
+        //         //this is being taken care inside a function
 
-                //make sure to have ANN token creation per address; removed
-                //let payment = self.shares.take(target_xrd_amount);
+        //         //make sure to have ANN token creation per address; removed
+        //         //let payment = self.shares.take(target_xrd_amount);
 
-                //token resource_address
-                let ann_resource_address = latest_ann_component.get_annuity_address();
+        //         //token resource_address
+        //         let ann_resource_address = latest_ann_component.get_annuity_address();
 
-                let mut vault = self.ann_tokens.get_mut(&ann_resource_address).unwrap(); //was mutable earlier
+        //         let mut vault = self.ann_tokens.get_mut(&ann_resource_address).unwrap(); //was mutable earlier
 
-                let annuity_token_to_showcase = vault.take(1);
+        //         let annuity_token_to_showcase = vault.take(1);
 
-                let (ann_token_in_return, payout_or_collateral, liquidated, premature_claim) =
-                    latest_ann_component.claim_annual_payout(annuity_token_to_showcase);
+        //         let (ann_token_in_return, payout_or_collateral, liquidated, premature_claim) =
+        //             latest_ann_component.claim_annual_payout(annuity_token_to_showcase);
 
-                // let mut vault_to_give_back_ann = self.ann_tokens.get_mut(&r_a).unwrap();
-                vault.put(ann_token_in_return);
+        //         // let mut vault_to_give_back_ann = self.ann_tokens.get_mut(&r_a).unwrap();
+        //         vault.put(ann_token_in_return);
 
-                if liquidated == true {
-                    self.liquidated_collateral =
-                        Vault::new(payout_or_collateral.resource_address());
-                    self.liquidated_collateral.put(payout_or_collateral);
-                } else {
-                    if premature_claim == false {
-                        self.shares.put(payout_or_collateral);
-                    } else {
-                        println!("there is a empty bucket to add");
-                    }
-                }
-                Ok(())
-            } else {
-                Err("No ANN Token created by the specified address.".to_string())
-            }
-        }
+        //         if liquidated == true {
+        //             self.liquidated_collateral =
+        //                 Vault::new(payout_or_collateral.resource_address());
+        //             self.liquidated_collateral.put(payout_or_collateral);
+        //         } else {
+        //             if premature_claim == false {
+        //                 self.shares.put(payout_or_collateral);
+        //             } else {
+        //                 println!("there is a empty bucket to add");
+        //             }
+        //         }
+        //         Ok(())
+        //     } else {
+        //         Err("No ANN Token created by the specified address.".to_string())
+        //     }
+        // }
 
         //FOR BOND ISSUER TO TAKE OUT COMMUNITY INVESTMENT
         pub fn take_out_the_invested_XRDs_by_the_community(

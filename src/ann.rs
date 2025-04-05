@@ -146,132 +146,132 @@ mod annuity {
             
         }
 
-        pub fn claim_annual_payout(&mut self, annuity_token: Bucket) -> (Bucket, Bucket, bool, bool) {
-            assert!(
-                annuity_token.amount() == Decimal::one(),
-                "You can only claim for one annuity (ANN) at a time."
-            );
+        // pub fn claim_annual_payout(&mut self, annuity_token: Bucket) -> (Bucket, Bucket, bool, bool) {
+        //     assert!(
+        //         annuity_token.amount() == Decimal::one(),
+        //         "You can only claim for one annuity (ANN) at a time."
+        //     );
 
-            assert!(
-                annuity_token.resource_address() == self.annuities.resource_address(),
-                "Invalid annuity resource."
-            );
+        //     assert!(
+        //         annuity_token.resource_address() == self.annuities.resource_address(),
+        //         "Invalid annuity resource."
+        //     );
 
-            // let current_epoch =
-            //     Clock::current_time_rounded_to_seconds().seconds_since_unix_epoch as u64;
+        //     // let current_epoch =
+        //     //     Clock::current_time_rounded_to_seconds().seconds_since_unix_epoch as u64;
 
-            let now = Clock::current_time_rounded_to_seconds();
-            let current_time_seconds = now.seconds_since_unix_epoch;
+        //     let now = Clock::current_time_rounded_to_seconds();
+        //     let current_time_seconds = now.seconds_since_unix_epoch;
 
-            //notice it gives out timestamp in integer which contains non-fractional values
+        //     //notice it gives out timestamp in integer which contains non-fractional values
 
-            let seconds_in_year = 365 * 24 * 60 * 60;
-            //31536000
+        //     let seconds_in_year = 365 * 24 * 60 * 60;
+        //     //31536000
 
-            //year elapsed since last payout
+        //     //year elapsed since last payout
 
-            let prev_payout_claimed_at = self.last_payout_epoch;
+        //     let prev_payout_claimed_at = self.last_payout_epoch;
 
-            let years_elapsed = (current_time_seconds - self.last_payout_epoch as i64) / seconds_in_year;
+        //     let years_elapsed = (current_time_seconds - self.last_payout_epoch as i64) / seconds_in_year;
 
-            if years_elapsed >= 1 {
+        //     if years_elapsed >= 1 {
 
-                let interest_payment: Decimal =
-                    self.notional_principal * self.nominal_interest_rate / Decimal::from(100);
+        //         let interest_payment: Decimal =
+        //             self.notional_principal * self.nominal_interest_rate / Decimal::from(100);
 
-                //this much payout should be made
-                let total_payout = self.annual_payout + interest_payment;
+        //         //this much payout should be made
+        //         let total_payout = self.annual_payout + interest_payment;
 
-                //check if the contract has this much payout to give
-                let available_balance = self.collected_xrd.amount();
+        //         //check if the contract has this much payout to give
+        //         let available_balance = self.collected_xrd.amount();
 
-                if available_balance >= total_payout{
-                    //payment will be done
+        //         if available_balance >= total_payout{
+        //             //payment will be done
 
-                    let payout = self.collected_xrd.take(total_payout);
-                    self.last_payout_epoch = current_time_seconds as u64;
-                    let remaining_time = seconds_in_year - (current_time_seconds - self.last_payout_epoch as i64);
-                    // let message = format!("You can have successfully claimed your annual payout");
+        //             let payout = self.collected_xrd.take(total_payout);
+        //             self.last_payout_epoch = current_time_seconds as u64;
+        //             let remaining_time = seconds_in_year - (current_time_seconds - self.last_payout_epoch as i64);
+        //             // let message = format!("You can have successfully claimed your annual payout");
                     
-                    let event_metadata = ClaimAnnualPayout {
-                        // message,
-                        annual_payout_redeemed : true,
-                        payout_claimed_at : Some(current_time_seconds as u64),
-                        prev_payout_claimed_at : Some(prev_payout_claimed_at),
-                        remaining_time_to_next_payout : remaining_time
-                    };
+        //             let event_metadata = ClaimAnnualPayout {
+        //                 // message,
+        //                 annual_payout_redeemed : true,
+        //                 payout_claimed_at : Some(current_time_seconds as u64),
+        //                 prev_payout_claimed_at : Some(prev_payout_claimed_at),
+        //                 remaining_time_to_next_payout : remaining_time
+        //             };
     
-                    Runtime::emit_event(PandaoEvent {
-                        event_type: EventType::ANNUAL_PAYOUT_CLAIMED,
-                        dao_type: DaoType::Insurance,
-                        component_address : Runtime::global_address(),
-                        meta_data: DaoEvent::ClaimAnnualPayout(event_metadata)
-                    });
+        //             Runtime::emit_event(PandaoEvent {
+        //                 event_type: EventType::ANNUAL_PAYOUT_CLAIMED,
+        //                 dao_type: DaoType::Insurance,
+        //                 component_address : Runtime::global_address(),
+        //                 meta_data: DaoEvent::ClaimAnnualPayout(event_metadata)
+        //             });
 
-                    let liquidated = false;
-                    let premature_claim = false;
+        //             let liquidated = false;
+        //             let premature_claim = false;
 
-                    (annuity_token, payout, liquidated, premature_claim)
+        //             (annuity_token, payout, liquidated, premature_claim)
 
-                }
-                else{
-                    //perform liquidation
+        //         }
+        //         else{
+        //             //perform liquidation
 
-                    let redeemed_collateral = self.liquidate_collateral();
+        //             let redeemed_collateral = self.liquidate_collateral();
 
-                    let collateral_resource_address = self.collateral_resource_address;
-                    let collateral_amount = redeemed_collateral.amount();
+        //             let collateral_resource_address = self.collateral_resource_address;
+        //             let collateral_amount = redeemed_collateral.amount();
 
-                    let liquidated = true;
-                    let premature_claim = false;
+        //             let liquidated = true;
+        //             let premature_claim = false;
 
-                    let event_metadata = LiquidatedCollateral {  
-                        collateral_resource_address,
-                        collateral_amount,
-                        liquidated_at : Some(current_time_seconds as u64),
-                        prev_payout_claimed_at : Some(prev_payout_claimed_at),
-                        collateral_liquidated : true
-                    };
+        //             let event_metadata = LiquidatedCollateral {  
+        //                 collateral_resource_address,
+        //                 collateral_amount,
+        //                 liquidated_at : Some(current_time_seconds as u64),
+        //                 prev_payout_claimed_at : Some(prev_payout_claimed_at),
+        //                 collateral_liquidated : true
+        //             };
 
-                    Runtime::emit_event(PandaoEvent {
-                        event_type: EventType::COLLATERAL_LIQUIDATED,
-                        dao_type: DaoType::Insurance,
-                        component_address : Runtime::global_address(),
-                        meta_data: DaoEvent::CollateralLiquidated(event_metadata)
-                    });
+        //             Runtime::emit_event(PandaoEvent {
+        //                 event_type: EventType::COLLATERAL_LIQUIDATED,
+        //                 dao_type: DaoType::Insurance,
+        //                 component_address : Runtime::global_address(),
+        //                 meta_data: DaoEvent::CollateralLiquidated(event_metadata)
+        //             });
                     
-                    (annuity_token, redeemed_collateral, liquidated, premature_claim)
-                }                
+        //             (annuity_token, redeemed_collateral, liquidated, premature_claim)
+        //         }                
 
-            } else {
+        //     } else {
 
-                let empty_bucket = self.collected_xrd.take(0);
+        //         let empty_bucket = self.collected_xrd.take(0);
                 
-                let remaining_time = seconds_in_year - (current_time_seconds - self.last_payout_epoch as i64);
+        //         let remaining_time = seconds_in_year - (current_time_seconds - self.last_payout_epoch as i64);
 
-                // let message = format!("You can claim your annual payout after {} seconds.", remaining_time);
+        //         // let message = format!("You can claim your annual payout after {} seconds.", remaining_time);
 
-                let event_metadata = ClaimAnnualPayout {
-                    // message,
-                    annual_payout_redeemed : false,
-                    payout_claimed_at : Some(prev_payout_claimed_at),
-                    prev_payout_claimed_at : Some(prev_payout_claimed_at),
-                    remaining_time_to_next_payout : remaining_time
-                };
+        //         let event_metadata = ClaimAnnualPayout {
+        //             // message,
+        //             annual_payout_redeemed : false,
+        //             payout_claimed_at : Some(prev_payout_claimed_at),
+        //             prev_payout_claimed_at : Some(prev_payout_claimed_at),
+        //             remaining_time_to_next_payout : remaining_time
+        //         };
 
-                Runtime::emit_event(PandaoEvent {
-                    event_type: EventType::ANNUAL_PAYOUT_COULD_NOT_BE_CLAIMED,
-                    dao_type: DaoType::Insurance,
-                    component_address : Runtime::global_address(),
-                    meta_data: DaoEvent::ClaimAnnualPayout(event_metadata)
-                });
+        //         Runtime::emit_event(PandaoEvent {
+        //             event_type: EventType::ANNUAL_PAYOUT_COULD_NOT_BE_CLAIMED,
+        //             dao_type: DaoType::Insurance,
+        //             component_address : Runtime::global_address(),
+        //             meta_data: DaoEvent::ClaimAnnualPayout(event_metadata)
+        //         });
 
-                let liquidated= false;
-                let premature_claim = true;
+        //         let liquidated= false;
+        //         let premature_claim = true;
 
-                (annuity_token, empty_bucket, liquidated, premature_claim)
-            }
-        }
+        //         (annuity_token, empty_bucket, liquidated, premature_claim)
+        //     }
+        // }
 
         pub fn liquidate_collateral(&mut self) -> Bucket{
 
